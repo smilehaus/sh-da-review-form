@@ -123,6 +123,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .gate-na { background: var(--sandstone); color: var(--onyx); opacity: 0.5; }
 .tier-chevron { font-size: 11px; color: var(--taupe); transition: transform 0.2s; flex-shrink: 0; }
 .tier-chevron.open { transform: rotate(180deg); }
+.pass-all-btn {
+  font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  background: #d4edda; border: 1.5px solid #2d6a3f; color: #2d6a3f;
+  border-radius: 4px; padding: 3px 9px; cursor: pointer; flex-shrink: 0;
+  transition: all 0.12s; white-space: nowrap;
+}
+.pass-all-btn:hover { background: #2d6a3f; color: #fff; }
+.pass-all-btn.all-passed { background: #2d6a3f; color: #fff; }
 
 .tier-body { display: none; border-top: 1px solid var(--sandstone); }
 .tier-body.open { display: block; }
@@ -603,6 +611,7 @@ function renderTierAccordion() {
         <span class="tier-title">${tier.label}</span>
         <span class="tier-rate">${tier.rate}</span>
         <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
+        <button class="pass-all-btn" id="passAllBtn_${key}" onclick="event.stopPropagation();passAllSkills('${key}')" title="Mark all skills ✓">✓ Pass All</button>
         <span class="tier-chevron" id="tierChevron_${key}">▼</span>
       </button>
       <div class="tier-body" id="tierBody_${key}">
@@ -639,6 +648,22 @@ function setScore(id, val) {
   document.querySelectorAll(`[data-id="${id}"]`).forEach(btn => {
     btn.classList.toggle('active', String(btn.dataset.val) === String(val));
   });
+  recalc();
+}
+
+function passAllSkills(tierKey) {
+  const skills = TIER_SKILLS[tierKey];
+  const allAlreadyPassed = skills.every((_, idx) => skillState[`${tierKey}_${idx}`] === 'can');
+  skills.forEach((_, idx) => {
+    const k = `${tierKey}_${idx}`;
+    skillState[k] = allAlreadyPassed ? null : 'can';
+    const canBtn    = document.getElementById(`skill_${tierKey}_${idx}_can`);
+    const cannotBtn = document.getElementById(`skill_${tierKey}_${idx}_cannot`);
+    if (canBtn)    canBtn.className    = 'skill-btn' + (!allAlreadyPassed ? ' can-do' : '');
+    if (cannotBtn) cannotBtn.className = 'skill-btn';
+  });
+  const btn = document.getElementById(`passAllBtn_${tierKey}`);
+  if (btn) btn.classList.toggle('all-passed', !allAlreadyPassed);
   recalc();
 }
 
@@ -720,6 +745,8 @@ function recalc() {
     const gs = getTierGateStatus(k);
     statusEl.className = 'tier-gate-status ' + (gs === 'pass' ? 'gate-pass' : gs === 'fail' ? 'gate-fail' : gs === 'incomplete' ? 'gate-partial' : 'gate-na');
     statusEl.textContent = gs === 'pass' ? '✓ Pass' : gs === 'fail' ? '✗ Fail' : gs === 'incomplete' ? '…' : '—';
+    const passBtn = document.getElementById(`passAllBtn_${k}`);
+    if (passBtn) passBtn.classList.toggle('all-passed', gs === 'pass');
   });
 
   // Gate A: all tiers from T1 through current tier must pass
