@@ -743,8 +743,8 @@ function recalc() {
     toggle.className = 'tier-toggle' + (k === tierKey ? ' current-tier' : tier && tier.next === k ? ' next-tier' : '');
     badge.className = 'tier-badge' + (k === tierKey ? ' current' : tier && tier.next === k ? ' next' : '');
     const gs = getTierGateStatus(k);
-    statusEl.className = 'tier-gate-status ' + (gs === 'pass' ? 'gate-pass' : gs === 'fail' ? 'gate-fail' : gs === 'incomplete' ? 'gate-partial' : 'gate-na');
-    statusEl.textContent = gs === 'pass' ? '✓ Pass' : gs === 'fail' ? '✗ Fail' : gs === 'incomplete' ? '…' : '—';
+    statusEl.className = 'tier-gate-status ' + (gs === 'pass' ? 'gate-pass' : gs === 'fail' ? 'gate-fail' : '');
+    statusEl.textContent = gs === 'pass' ? '✓ Pass' : gs === 'fail' ? '✗ Fail' : '';
     const passBtn = document.getElementById(`passAllBtn_${k}`);
     if (passBtn) passBtn.classList.toggle('all-passed', gs === 'pass');
   });
