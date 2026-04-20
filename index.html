@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DA Annual Review — Smile Haus</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --onyx: #2A2E31;
+  --alabaster: #F2EFE8;
+  --sandstone: #D6CDBD;
+  --taupe: #C2B09E;
+  --earth: #877765;
+  --white: #FFFFFF;
+  --radius: 6px;
+  --font-head: 'Cormorant Garamond', serif;
+  --font-body: 'Jost', sans-serif;
+}
+body { font-family: var(--font-body); background: var(--alabaster); color: var(--onyx); font-size: 15px; line-height: 1.5; }
+
+/* Header */
+.site-header { background: var(--onyx); padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; }
+.site-header img { height: 36px; }
+.site-header h1 { font-family: var(--font-head); color: var(--white); font-weight: 300; font-size: 22px; letter-spacing: 0.04em; }
+.settings-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--white); border-radius: var(--radius); padding: 6px 14px; cursor: pointer; font-family: var(--font-body); font-size: 13px; opacity: 0.8; }
+.settings-btn:hover { opacity: 1; }
+
+/* Main */
+.main { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
+
+/* Cards */
+.card { background: var(--white); border: 1px solid var(--sandstone); border-radius: var(--radius); margin-bottom: 24px; overflow: hidden; }
+.card-header { background: var(--onyx); color: var(--white); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+.card-header h2 { font-family: var(--font-head); font-weight: 300; font-size: 18px; letter-spacing: 0.03em; }
+.card-header .pts { font-size: 12px; opacity: 0.6; }
+.card-body { padding: 20px; }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--earth); margin-bottom: 5px; }
+input[type=text], input[type=date], input[type=number], select {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--sandstone); border-radius: var(--radius);
+  font-family: var(--font-body); font-size: 14px; background: var(--white); color: var(--onyx);
+}
+input:focus, select:focus { outline: 2px solid var(--earth); border-color: transparent; }
+
+/* KPI table */
+.kpi-table { width: 100%; border-collapse: collapse; }
+.kpi-table th { background: var(--earth); color: var(--white); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 14px; text-align: left; }
+.kpi-table th.center { text-align: center; }
+.kpi-table td { padding: 10px 14px; border-bottom: 1px solid var(--sandstone); vertical-align: middle; }
+.kpi-table tr:last-child td { border-bottom: none; }
+.kpi-table tr:nth-child(even) td { background: var(--alabaster); }
+.kpi-name { font-size: 14px; font-weight: 500; }
+.kpi-target { font-size: 12px; color: var(--earth); margin-top: 2px; }
+
+/* Score buttons */
+.score-group { display: flex; gap: 5px; justify-content: center; }
+.score-btn {
+  width: 36px; height: 36px; border: 1.5px solid var(--sandstone); background: var(--white);
+  border-radius: 50%; cursor: pointer; font-family: var(--font-body); font-size: 14px; font-weight: 500;
+  color: var(--onyx); transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+}
+.score-btn:hover { border-color: var(--earth); color: var(--earth); }
+.score-btn.active { background: var(--earth); border-color: var(--earth); color: var(--white); }
+.score-na {
+  width: 40px; height: 36px; border: 1.5px solid var(--sandstone); background: var(--white);
+  border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-size: 11px;
+  font-weight: 500; color: var(--taupe); transition: all 0.15s;
+}
+.score-na:hover { border-color: var(--taupe); }
+.score-na.active { background: var(--taupe); border-color: var(--taupe); color: var(--white); }
+
+/* Subtotals */
+.subtotal-row { text-align: right; padding: 10px 14px; font-size: 13px; color: var(--earth); font-weight: 600; }
+
+/* Perf sections */
+.subsection-label { background: var(--sandstone); padding: 9px 14px; font-size: 13px; font-weight: 600; color: var(--onyx); letter-spacing: 0.02em; }
+.perf-table { width: 100%; border-collapse: collapse; }
+.perf-table th { background: var(--earth); color: var(--white); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 14px; text-align: left; }
+.perf-table th.center { text-align: center; }
+.perf-table td { padding: 10px 14px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.perf-table tr:last-child td { border-bottom: none; }
+.perf-table tr:nth-child(even) td { background: var(--alabaster); }
+.crit-name { font-size: 14px; font-weight: 500; }
+.crit-desc { font-size: 12px; color: var(--taupe); margin-top: 2px; }
+
+/* Score summary sticky */
+.score-summary {
+  position: sticky; top: 12px; z-index: 10;
+  background: var(--onyx); color: var(--white); border-radius: var(--radius);
+  padding: 16px 24px; margin-bottom: 24px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr 2fr; gap: 16px; align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.sum-block { text-align: center; }
+.sum-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.55; margin-bottom: 3px; }
+.sum-value { font-size: 24px; font-weight: 600; font-family: var(--font-head); }
+.sum-value.highlight { color: var(--taupe); }
+.band-block { text-align: right; }
+.band-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; opacity: 0.85; }
+.raise-preview { font-size: 30px; font-weight: 700; font-family: var(--font-head); line-height: 1; }
+.new-rate { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+
+/* Band colors */
+.band-pip { color: #e87770; }
+.band-coaching { color: #e8c170; }
+.band-meets { color: #a8c470; }
+.band-exceeds { color: #70c4b8; }
+.band-outstanding { color: #c4a070; }
+
+/* Tier advancement */
+.advance-wrap { padding: 4px; }
+.advance-box {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+  background: var(--alabaster); border: 1.5px solid var(--sandstone); border-radius: var(--radius); cursor: pointer;
+}
+.advance-box:has(input:checked) { border-color: var(--earth); }
+.advance-box input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--earth); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.advance-label { font-size: 14px; font-weight: 500; line-height: 1.4; }
+.advance-sub { font-size: 12px; color: var(--taupe); margin-top: 4px; }
+.advance-result { margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); font-size: 14px; font-weight: 500; display: none; }
+.advance-result.promoting { background: var(--earth); color: var(--white); display: block; }
+.advance-result.warning { background: #f5efe5; color: var(--earth); border: 1px solid var(--taupe); display: block; }
+
+/* Submit */
+.submit-section { background: var(--white); border: 1px solid var(--sandstone); border-radius: var(--radius); padding: 24px; margin-top: 24px; }
+.submit-section h2 { font-family: var(--font-head); font-weight: 400; font-size: 20px; margin-bottom: 16px; }
+.sig-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end; margin-bottom: 16px; }
+.submit-btn {
+  background: var(--earth); color: var(--white); border: none; border-radius: var(--radius);
+  padding: 14px 32px; font-family: var(--font-body); font-size: 16px; font-weight: 600;
+  cursor: pointer; width: 100%; letter-spacing: 0.03em; transition: background 0.2s;
+}
+.submit-btn:hover { background: var(--onyx); }
+.submit-btn:disabled { background: var(--sandstone); cursor: not-allowed; }
+
+/* Scale bar */
+.scale-bar {
+  background: var(--white); border: 1px solid var(--sandstone); border-radius: var(--radius);
+  padding: 9px 16px; font-size: 12px; text-align: center; color: var(--earth); margin-bottom: 20px;
+}
+.scale-bar b { color: var(--onyx); }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--white); border-radius: var(--radius); padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+.modal h3 { font-family: var(--font-head); font-weight: 400; font-size: 20px; margin-bottom: 6px; color: var(--onyx); }
+.modal-hint { font-size: 13px; color: var(--taupe); margin-bottom: 20px; }
+.modal-field { margin-bottom: 14px; }
+.modal-section { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--earth); margin: 18px 0 10px; border-top: 1px solid var(--sandstone); padding-top: 14px; }
+.modal-actions { margin-top: 20px; display: flex; gap: 10px; }
+.btn-save { background: var(--earth); color: var(--white); border: none; padding: 10px 20px; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-size: 14px; font-weight: 500; }
+.btn-cancel { background: none; border: 1px solid var(--sandstone); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; font-family: var(--font-body); font-size: 14px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--onyx); color: var(--white);
+  padding: 14px 20px; border-radius: var(--radius); font-size: 14px; z-index: 200;
+  opacity: 0; transform: translateY(10px); transition: all 0.3s; max-width: 380px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #3a7a4a; }
+.toast.error { background: #8a3a3a; }
+
+/* Footer */
+.site-footer { background: var(--onyx); color: rgba(255,255,255,0.35); text-align: center; padding: 18px; font-size: 12px; margin-top: 48px; }
+.site-footer img { height: 20px; opacity: 0.3; vertical-align: middle; margin-right: 8px; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .info-grid { grid-template-columns: 1fr; }
+  .score-summary { grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .sum-block:nth-child(3) { display: none; }
+  .site-header { padding: 14px 16px; }
+  .site-header h1 { font-size: 16px; }
+  .main { padding: 16px 12px 60px; }
+  .score-btn { width: 30px; height: 30px; font-size: 13px; }
+  .sig-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <img src="logo-white.png" alt="Smile Haus" onerror="this.style.display='none'">
+  <h1>Dental Assistant Annual Review</h1>
+  <button class="settings-btn" onclick="openSettings()">&#9881; Settings</button>
+</header>
+
+<div class="main">
+
+  <!-- Sticky score summary -->
+  <div class="score-summary">
+    <div class="sum-block">
+      <div class="sum-label">Part I — KPIs</div>
+      <div class="sum-value"><span id="p1Total">0</span><span style="font-size:13px;opacity:0.45">/<span id="p1Max">45</span></span></div>
+    </div>
+    <div class="sum-block">
+      <div class="sum-label">Part II — Performance</div>
+      <div class="sum-value"><span id="p2Total">0</span><span style="font-size:13px;opacity:0.45">/75</span></div>
+    </div>
+    <div class="sum-block">
+      <div class="sum-label">Total Score</div>
+      <div class="sum-value highlight"><span id="totalScore">0</span><span style="font-size:13px;opacity:0.45">/<span id="totalMax">120</span></span></div>
+    </div>
+    <div class="band-block">
+      <div class="band-name" id="bandName" style="opacity:0.4;">Fill in scores below</div>
+      <div class="raise-preview" id="raisePreview">—</div>
+      <div class="new-rate" id="newRatePreview">Select tier + enter scores</div>
+    </div>
+  </div>
+
+  <!-- Employee Info -->
+  <div class="card">
+    <div class="card-header"><h2>Employee Information</h2></div>
+    <div class="card-body">
+      <div class="info-grid">
+        <div>
+          <label>DA Name</label>
+          <input type="text" id="daName" placeholder="Full name">
+        </div>
+        <div>
+          <label>Home Office</label>
+          <select id="homeOffice">
+            <option value="">— Select office —</option>
+            <option>Georgetown</option>
+            <option>On the Square</option>
+            <option>Austin</option>
+            <option>Implant Center</option>
+            <option>Medical Parkway</option>
+            <option>Arboretum</option>
+            <option>Pflugerville</option>
+            <option>South Austin</option>
+            <option>New Braunfels Dental Arts</option>
+            <option>Anderson Mill</option>
+          </select>
+        </div>
+        <div>
+          <label>Current Tier</label>
+          <select id="currentTier" onchange="recalc()">
+            <option value="">— Select tier —</option>
+            <option value="T1">T1 — $17/hr — Entry, Just Graduated</option>
+            <option value="T2">T2 — $18/hr — Solo Assisting</option>
+            <option value="T3">T3 — $19–20/hr — Crown &amp; Bridge</option>
+            <option value="T4">T4 — $21–22/hr — Multi-Temps, Surgery</option>
+            <option value="T5">T5 — $23–24/hr — Back-Office Lead</option>
+            <option value="T6">T6 — $25–26/hr — FD Coverage &amp; Trainer</option>
+            <option value="T7">T7 — $27–29/hr — Complex Tx, OM Coverage</option>
+          </select>
+        </div>
+        <div>
+          <label>Current Hourly Rate ($)</label>
+          <input type="number" id="currentRate" placeholder="e.g. 18.50" step="0.25" min="14" max="35" onchange="recalc()">
+        </div>
+        <div>
+          <label>Review Period</label>
+          <input type="text" id="reviewPeriod" placeholder="e.g. Jan 2025 – Dec 2025">
+        </div>
+        <div>
+          <label>Review Date</label>
+          <input type="date" id="reviewDate">
+        </div>
+        <div>
+          <label>Reviewer (OM Name)</label>
+          <input type="text" id="reviewerName" placeholder="Office Manager name">
+        </div>
+        <div>
+          <label>Hire Date</label>
+          <input type="date" id="hireDate">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating scale reference -->
+  <div class="scale-bar">
+    <b>Rating Scale</b> &nbsp;·&nbsp;
+    <b>1</b> Does Not Meet &nbsp;·&nbsp;
+    <b>2</b> Partially Meets &nbsp;·&nbsp;
+    <b>3</b> Meets Expectations &nbsp;·&nbsp;
+    <b>4</b> Exceeds &nbsp;·&nbsp;
+    <b>5</b> Outstanding
+  </div>
+
+  <!-- Part I: KPIs -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Part I — KPI Performance</h2>
+      <span class="pts" id="p1Header">/ 45 pts</span>
+    </div>
+    <div style="padding:0">
+      <table class="kpi-table">
+        <thead>
+          <tr>
+            <th style="width:50%">KPI</th>
+            <th style="width:18%;text-align:center">Target</th>
+            <th style="width:32%;text-align:center">Score (1–5)</th>
+          </tr>
+        </thead>
+        <tbody id="kpiBody"></tbody>
+      </table>
+      <div class="subtotal-row">
+        Part I Total: <span id="kpiSubtotal">0</span> / <span id="kpiDenom">45</span>
+      </div>
+      <div style="padding: 4px 14px 12px; font-size: 12px; color: var(--taupe);">
+        * iTero Scan: tap N/A if your office doesn't use iTero or DA is below T3.
+      </div>
+    </div>
+  </div>
+
+  <!-- Part II: In-Office Performance -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Part II — In-Office Performance</h2>
+      <span class="pts">/ 75 pts (15 criteria × 5)</span>
+    </div>
+    <div style="padding:0" id="perfBody"></div>
+  </div>
+
+  <!-- Tier Advancement -->
+  <div class="card">
+    <div class="card-header"><h2>Tier Advancement</h2></div>
+    <div class="card-body advance-wrap">
+      <p style="font-size:13px;color:var(--taupe);margin-bottom:12px;">
+        Promotion requires total score ≥ 85 <em>and</em> OM certification below. If not promoting, leave unchecked.
+      </p>
+      <label class="advance-box" for="advanceCheck">
+        <input type="checkbox" id="advanceCheck" onchange="recalc()">
+        <div>
+          <div class="advance-label">I certify this employee is ready to advance to the next tier</div>
+          <div class="advance-sub">Confirms mastery of current-tier and next-tier skills</div>
+        </div>
+      </label>
+      <div class="advance-result" id="advanceResult"></div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div class="submit-section">
+    <h2>Submit for Approval</h2>
+    <div class="sig-row">
+      <div>
+        <label>OM Signature (typed name)</label>
+        <input type="text" id="omSignature" placeholder="Type your full name to sign">
+      </div>
+      <div>
+        <label>Date</label>
+        <input type="date" id="submitDate">
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--taupe);margin-bottom:16px;">
+      Submitting emails a raise summary to leadership and creates a ClickUp approval task.
+      Configure both in <strong>Settings</strong> (gear icon, top right).
+    </p>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Submit for Approval</button>
+  </div>
+
+</div>
+
+<footer class="site-footer">
+  <img src="logo-white.png" alt="" onerror="this.style.display='none'">
+  Smile Haus Dental &nbsp;·&nbsp; DA Annual Review System &nbsp;·&nbsp; Confidential
+</footer>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h3>&#9881; Integration Settings</h3>
+    <p class="modal-hint">Saved in this browser. Each OM device needs to be configured once.</p>
+
+    <div class="modal-field">
+      <label>Approval Email (To)</label>
+      <input type="text" id="cfg_email" placeholder="leadership@smilehaus.com">
+    </div>
+
+    <div class="modal-section">EmailJS</div>
+    <div class="modal-field">
+      <label>Public Key</label>
+      <input type="text" id="cfg_ejs_key" placeholder="your_public_key">
+    </div>
+    <div class="modal-field">
+      <label>Service ID</label>
+      <input type="text" id="cfg_ejs_svc" placeholder="service_xxxxxxx">
+    </div>
+    <div class="modal-field">
+      <label>Template ID</label>
+      <input type="text" id="cfg_ejs_tpl" placeholder="template_xxxxxxx">
+    </div>
+
+    <div class="modal-section">ClickUp</div>
+    <div class="modal-field">
+      <label>API Token</label>
+      <input type="text" id="cfg_cu_token" placeholder="pk_...">
+    </div>
+    <div class="modal-field">
+      <label>List ID (Employee Review)</label>
+      <input type="text" id="cfg_cu_list" placeholder="901xxxxxxxxx">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const TIERS = {
+  T1: { floor: 17.00, ceiling: 17.00, x: 0.015, next: 'T2', label: 'Entry — Just Graduated' },
+  T2: { floor: 18.00, ceiling: 18.00, x: 0.018, next: 'T3', label: 'Solo Assisting' },
+  T3: { floor: 19.00, ceiling: 20.00, x: 0.020, next: 'T4', label: 'Crown & Bridge' },
+  T4: { floor: 21.00, ceiling: 22.00, x: 0.022, next: 'T5', label: 'Multi-Temps, Surgery' },
+  T5: { floor: 23.00, ceiling: 24.00, x: 0.025, next: 'T6', label: 'Back-Office Lead' },
+  T6: { floor: 25.00, ceiling: 26.00, x: 0.028, next: 'T7', label: 'FD Coverage & Trainer' },
+  T7: { floor: 27.00, ceiling: 29.00, x: 0.030, next: null, label: 'Complex Tx, OM Coverage' },
+};
+
+const KPIS = [
+  { id: 'kpi1', name: 'Daily Adjusted Production', sub: 'Office goal', target: 'Hit goal' },
+  { id: 'kpi2', name: 'New Patients / Month', sub: 'Team metric', target: '≥ 30' },
+  { id: 'kpi3', name: 'Reviews Received / Month', sub: 'Team metric', target: '≥ 40' },
+  { id: 'kpi4', name: 'Doctor Case Acceptance', sub: 'Chairside support', target: '≥ 45%' },
+  { id: 'kpi5', name: 'Room Turnover Time', sub: 'Setup to ready', target: '≤ 8 min' },
+  { id: 'kpi6', name: 'Sterilization & Infection Control', sub: '', target: '100%' },
+  { id: 'kpi7', name: 'Radiograph Quality', sub: 'Diagnostic on 1st take', target: '≥ 95%' },
+  { id: 'kpi8', name: 'iTero Scan Proficiency', sub: 'N/A if not applicable at this office', target: '≥ 90%', optional: true },
+  { id: 'kpi9', name: 'Doctor Schedule Adherence', sub: 'Keeps Dr. on time', target: '≥ 90%' },
+];
+
+const PERF_SECTIONS = [
+  {
+    id: 'A', title: 'Attitude, Professionalism & Culture Fit',
+    items: [
+      { id: 'a1', name: 'Attitude', desc: 'Positive, team-oriented, patient-focused' },
+      { id: 'a2', name: 'Professionalism', desc: 'Appearance, timeliness, language' },
+      { id: 'a3', name: 'Culture Fit', desc: 'Aligns with Smile Haus values and norms' },
+      { id: 'a4', name: 'Integrity', desc: 'Honest, accountable, trustworthy' },
+      { id: 'a5', name: 'Reliability', desc: 'Consistent attendance and follow-through' },
+    ]
+  },
+  {
+    id: 'B', title: 'Willingness to Learn & Growth Mindset',
+    items: [
+      { id: 'b1', name: 'Coachability', desc: 'Accepts feedback and applies it' },
+      { id: 'b2', name: 'Skill Development', desc: 'Actively works to expand clinical skills' },
+      { id: 'b3', name: 'Adaptability', desc: 'Handles change and new systems well' },
+      { id: 'b4', name: 'Ownership of Mistakes', desc: 'Takes responsibility, doesn\'t deflect' },
+      { id: 'b5', name: 'SOP & OSHA Compliance', desc: 'Follows protocols consistently' },
+    ]
+  },
+  {
+    id: 'C', title: 'Clinical Excellence & Team Contribution',
+    items: [
+      { id: 'c1', name: 'Anticipating Doctor Needs', desc: 'Stays one step ahead chairside' },
+      { id: 'c2', name: 'Chairside Manner', desc: 'Patient comfort, communication, calm' },
+      { id: 'c3', name: 'Clinical Team Support', desc: 'Helps peers, covers gaps, communicates' },
+      { id: 'c4', name: 'Patient Handoff', desc: 'Clean, warm, complete transitions' },
+      { id: 'c5', name: 'Cross-Office Support', desc: 'Willing to cover other offices when needed' },
+    ]
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const scores = {};
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function renderKPIs() {
+  document.getElementById('kpiBody').innerHTML = KPIS.map(k => `
+    <tr>
+      <td>
+        <div class="kpi-name">${k.name}</div>
+        ${k.sub ? `<div class="kpi-target">${k.sub}</div>` : ''}
+      </td>
+      <td style="text-align:center;font-size:13px;color:var(--earth);">${k.target}</td>
+      <td>
+        <div class="score-group">
+          ${[1,2,3,4,5].map(v =>
+            `<button class="score-btn" data-id="${k.id}" data-val="${v}" onclick="setScore('${k.id}',${v})">${v}</button>`
+          ).join('')}
+          ${k.optional ? `<button class="score-na" data-id="${k.id}" data-val="na" onclick="setScore('${k.id}','na')">N/A</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderPerf() {
+  document.getElementById('perfBody').innerHTML = PERF_SECTIONS.map(sec => `
+    <div class="subsection-label">${sec.id}. &nbsp;${sec.title}</div>
+    <table class="perf-table">
+      <thead><tr>
+        <th style="width:62%">Performance Standard</th>
+        <th class="center" style="width:38%">Score (1–5)</th>
+      </tr></thead>
+      <tbody>
+        ${sec.items.map(item => `
+          <tr>
+            <td>
+              <div class="crit-name">${item.name}</div>
+              <div class="crit-desc">${item.desc}</div>
+            </td>
+            <td>
+              <div class="score-group">
+                ${[1,2,3,4,5].map(v =>
+                  `<button class="score-btn" data-id="${item.id}" data-val="${v}" onclick="setScore('${item.id}',${v})">${v}</button>`
+                ).join('')}
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <div class="subtotal-row" style="padding-bottom:12px;">
+      Subsection ${sec.id} Total: <span id="sub${sec.id}Total">0</span> / 25
+    </div>
+  `).join('');
+}
+
+// ─── SCORING ─────────────────────────────────────────────────────────────────
+
+function setScore(id, val) {
+  scores[id] = val === 'na' ? 'na' : parseInt(val);
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle('active', String(btn.dataset.val) === String(val));
+  });
+  recalc();
+}
+
+function recalc() {
+  // Part I
+  let p1 = 0, p1Max = 0;
+  KPIS.forEach(k => {
+    const v = scores[k.id];
+    if (v === 'na') return; // excluded from denominator
+    p1Max += 5;
+    if (v) p1 += v;
+  });
+  if (p1Max === 0) p1Max = 45;
+
+  // Part II
+  let p2 = 0;
+  PERF_SECTIONS.forEach(sec => {
+    let st = 0;
+    sec.items.forEach(item => { st += scores[item.id] || 0; });
+    const el = document.getElementById(`sub${sec.id}Total`);
+    if (el) el.textContent = st;
+    p2 += st;
+  });
+
+  const total = p1 + p2;
+  const totalMax = p1Max + 75;
+
+  document.getElementById('p1Total').textContent = p1;
+  document.getElementById('p1Max').textContent = p1Max;
+  document.getElementById('kpiSubtotal').textContent = p1;
+  document.getElementById('kpiDenom').textContent = p1Max;
+  document.getElementById('p1Header').textContent = `/ ${p1Max} pts`;
+  document.getElementById('p2Total').textContent = p2;
+  document.getElementById('totalScore').textContent = total;
+  document.getElementById('totalMax').textContent = totalMax;
+
+  // Band
+  const { band, cls } = getBand(total);
+  const bandEl = document.getElementById('bandName');
+  bandEl.textContent = band;
+  bandEl.className = 'band-name ' + cls;
+  bandEl.style.opacity = '';
+
+  // Raise
+  const tierKey = document.getElementById('currentTier').value;
+  const currentRate = parseFloat(document.getElementById('currentRate').value) || 0;
+  const advance = document.getElementById('advanceCheck').checked;
+  const tier = TIERS[tierKey];
+
+  if (!tier) {
+    document.getElementById('raisePreview').textContent = '—';
+    document.getElementById('newRatePreview').textContent = 'Select a tier above';
+    document.getElementById('advanceResult').className = 'advance-result';
+    return;
+  }
+
+  if (total < 70) {
+    document.getElementById('raisePreview').textContent = '$0.00/hr';
+    document.getElementById('newRatePreview').textContent = 'Score below 70 — no raise';
+    document.getElementById('advanceResult').className = 'advance-result';
+    return;
+  }
+
+  const promoting = advance && total >= 85 && tier.next;
+  const pf = promoting ? 1.5 : 1.0;
+  const targetTier = promoting ? TIERS[tier.next] : tier;
+  const baseRate = currentRate > 0 ? currentRate : tier.floor;
+  const rawRaise = (total - 70) * tier.x * pf;
+  let newRate = Math.min(baseRate + rawRaise, targetTier.ceiling);
+  newRate = Math.max(newRate, promoting ? targetTier.floor : baseRate);
+  const finalRaise = newRate - baseRate;
+
+  document.getElementById('raisePreview').textContent = `+$${finalRaise.toFixed(2)}/hr`;
+  document.getElementById('newRatePreview').textContent = `New rate: $${newRate.toFixed(2)}/hr`;
+
+  // Advance result
+  const advEl = document.getElementById('advanceResult');
+  if (promoting) {
+    advEl.textContent = `Promoting to ${tier.next} — ${targetTier.label} · Performance Factor = 1.5×`;
+    advEl.className = 'advance-result promoting';
+  } else if (advance && total < 85) {
+    advEl.textContent = 'Score must reach 85+ to qualify for promotion. Within-tier raise applied.';
+    advEl.className = 'advance-result warning';
+  } else {
+    advEl.className = 'advance-result';
+  }
+}
+
+function getBand(score) {
+  if (score >= 100) return { band: 'Outstanding', cls: 'band-outstanding' };
+  if (score >= 85)  return { band: 'Exceeds Expectations', cls: 'band-exceeds' };
+  if (score >= 70)  return { band: 'Meets Expectations', cls: 'band-meets' };
+  if (score >= 55)  return { band: 'Coaching Plan', cls: 'band-coaching' };
+  return { band: 'PIP / Does Not Meet', cls: 'band-pip' };
+}
+
+// ─── SUBMIT ──────────────────────────────────────────────────────────────────
+
+async function handleSubmit() {
+  const daName = document.getElementById('daName').value.trim();
+  const office = document.getElementById('homeOffice').value;
+  const tier   = document.getElementById('currentTier').value;
+  const omSig  = document.getElementById('omSignature').value.trim();
+
+  if (!daName || !office || !tier || !omSig) {
+    showToast('Fill in DA Name, Office, Tier, and OM Signature before submitting.', 'error');
+    return;
+  }
+
+  const cfg = getConfig();
+  if (!cfg.ejsKey && !cfg.cuToken) {
+    showToast('Open Settings (gear icon) and configure EmailJS and/or ClickUp first.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const summary = buildSummary();
+  let emailOk = false, clickupOk = false;
+
+  if (cfg.ejsKey && cfg.ejsSvc && cfg.ejsTpl) {
+    try {
+      emailjs.init(cfg.ejsKey);
+      await emailjs.send(cfg.ejsSvc, cfg.ejsTpl, {
+        to_email: cfg.email,
+        da_name: daName,
+        office,
+        tier,
+        message: summary.text,
+        summary_html: summary.html,
+        review_date: document.getElementById('reviewDate').value,
+      });
+      emailOk = true;
+    } catch(e) { console.error('EmailJS:', e); }
+  }
+
+  if (cfg.cuToken && cfg.cuList) {
+    try {
+      const res = await fetch(`https://api.clickup.com/api/v2/list/${cfg.cuList}/task`, {
+        method: 'POST',
+        headers: { 'Authorization': cfg.cuToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `DA Raise Review — ${daName} — ${office} — ${document.getElementById('reviewDate').value || new Date().toISOString().slice(0,10)}`,
+          description: summary.text,
+          priority: 2,
+        }),
+      });
+      if (res.ok) clickupOk = true;
+    } catch(e) { console.error('ClickUp:', e); }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit for Approval';
+
+  const parts = [];
+  if (emailOk) parts.push('Email sent ✓');
+  else if (cfg.ejsKey) parts.push('Email failed — check EmailJS settings');
+  if (clickupOk) parts.push('ClickUp task created ✓');
+  else if (cfg.cuToken) parts.push('ClickUp failed — check list ID');
+
+  showToast(parts.join('  ·  ') || 'Done', emailOk || clickupOk ? 'success' : 'error');
+}
+
+function buildSummary() {
+  const f = id => document.getElementById(id)?.value || '—';
+  const t = id => document.getElementById(id)?.textContent || '—';
+
+  const daName     = f('daName');
+  const office     = f('homeOffice');
+  const tier       = f('currentTier');
+  const rate       = f('currentRate');
+  const period     = f('reviewPeriod');
+  const reviewDate = f('reviewDate');
+  const reviewer   = f('reviewerName');
+  const omSig      = f('omSignature');
+  const p1         = t('p1Total');
+  const p1Max      = t('p1Max');
+  const p2         = t('p2Total');
+  const total      = t('totalScore');
+  const totalMax   = t('totalMax');
+  const band       = t('bandName');
+  const raise      = t('raisePreview');
+  const newRate    = t('newRatePreview');
+  const advancing  = document.getElementById('advanceCheck').checked;
+
+  const text = [
+    'DA ANNUAL REVIEW — COMPENSATION SUMMARY',
+    '═══════════════════════════════════════',
+    `DA: ${daName}  |  Office: ${office}  |  Tier: ${tier}  |  Rate: $${rate}/hr`,
+    `Review Period: ${period}  |  Date: ${reviewDate}  |  Reviewer: ${reviewer}`,
+    '',
+    'SCORES',
+    `  Part I  — KPI Performance:      ${p1} / ${p1Max}`,
+    `  Part II — In-Office Performance: ${p2} / 75`,
+    `  TOTAL:                           ${total} / ${totalMax}  —  ${band}`,
+    '',
+    'COMPENSATION DECISION',
+    `  Raise:    ${raise}`,
+    `  ${newRate}`,
+    `  Tier Advancement: ${advancing ? 'Recommended ✓' : 'Not recommended'}`,
+    '',
+    `OM Signature: ${omSig}  |  Submitted: ${new Date().toLocaleDateString()}`,
+  ].join('\n');
+
+  const html = `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#2A2E31;">
+  <div style="background:#2A2E31;padding:20px 24px;">
+    <div style="color:#F2EFE8;font-family:Georgia,serif;font-size:20px;font-weight:300;">
+      DA Annual Review — Compensation Summary
+    </div>
+  </div>
+  <div style="padding:24px;background:#F2EFE8;">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px;">
+      <tr><td style="padding:7px 10px;font-weight:600;color:#877765;width:130px;">DA</td><td style="padding:7px 10px;">${daName}</td></tr>
+      <tr style="background:#fff"><td style="padding:7px 10px;font-weight:600;color:#877765;">Office</td><td style="padding:7px 10px;">${office}</td></tr>
+      <tr><td style="padding:7px 10px;font-weight:600;color:#877765;">Tier</td><td style="padding:7px 10px;">${tier}</td></tr>
+      <tr style="background:#fff"><td style="padding:7px 10px;font-weight:600;color:#877765;">Current Rate</td><td style="padding:7px 10px;">$${rate}/hr</td></tr>
+      <tr><td style="padding:7px 10px;font-weight:600;color:#877765;">Review Period</td><td style="padding:7px 10px;">${period}</td></tr>
+      <tr style="background:#fff"><td style="padding:7px 10px;font-weight:600;color:#877765;">Reviewer</td><td style="padding:7px 10px;">${reviewer}</td></tr>
+    </table>
+    <div style="background:#877765;color:#fff;padding:16px 20px;border-radius:5px;margin-bottom:8px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.75;margin-bottom:6px;">Total Score</div>
+      <div style="font-size:34px;font-family:Georgia,serif;font-weight:400;line-height:1;">${total} / ${totalMax}</div>
+      <div style="font-size:14px;margin-top:6px;opacity:0.9;">${band}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;">
+      <tr><td style="padding:8px 10px;">Part I — KPI Performance</td><td style="padding:8px 10px;text-align:right;font-weight:600;">${p1} / ${p1Max}</td></tr>
+      <tr style="background:#fff"><td style="padding:8px 10px;">Part II — In-Office Performance</td><td style="padding:8px 10px;text-align:right;font-weight:600;">${p2} / 75</td></tr>
+    </table>
+    <div style="background:#2A2E31;color:#fff;padding:18px 20px;border-radius:5px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;margin-bottom:6px;">Recommended Raise</div>
+      <div style="font-size:36px;font-family:Georgia,serif;">${raise}</div>
+      <div style="font-size:13px;opacity:0.7;margin-top:4px;">${newRate}</div>
+      <div style="font-size:13px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);">
+        Tier Advancement: ${advancing ? '✓ Recommended' : 'Not recommended'}
+      </div>
+    </div>
+    <div style="font-size:12px;color:#877765;border-top:1px solid #D6CDBD;padding-top:12px;">
+      Signed by: ${omSig} &nbsp;·&nbsp; Submitted: ${new Date().toLocaleDateString()}
+    </div>
+  </div>
+</div>`;
+
+  return { text, html };
+}
+
+// ─── SETTINGS ────────────────────────────────────────────────────────────────
+
+function getConfig() {
+  return {
+    email:  localStorage.getItem('sh_approval_email') || '',
+    ejsKey: localStorage.getItem('sh_emailjs_key')    || '',
+    ejsSvc: localStorage.getItem('sh_emailjs_service')|| '',
+    ejsTpl: localStorage.getItem('sh_emailjs_template')|| '',
+    cuToken:localStorage.getItem('sh_clickup_token')  || '',
+    cuList: localStorage.getItem('sh_comp_list_id')   || '',
+  };
+}
+
+function openSettings() {
+  const c = getConfig();
+  document.getElementById('cfg_email').value    = c.email;
+  document.getElementById('cfg_ejs_key').value  = c.ejsKey;
+  document.getElementById('cfg_ejs_svc').value  = c.ejsSvc;
+  document.getElementById('cfg_ejs_tpl').value  = c.ejsTpl;
+  document.getElementById('cfg_cu_token').value = c.cuToken;
+  document.getElementById('cfg_cu_list').value  = c.cuList;
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+function saveSettings() {
+  localStorage.setItem('sh_approval_email',    document.getElementById('cfg_email').value);
+  localStorage.setItem('sh_emailjs_key',       document.getElementById('cfg_ejs_key').value);
+  localStorage.setItem('sh_emailjs_service',   document.getElementById('cfg_ejs_svc').value);
+  localStorage.setItem('sh_emailjs_template',  document.getElementById('cfg_ejs_tpl').value);
+  localStorage.setItem('sh_clickup_token',     document.getElementById('cfg_cu_token').value);
+  localStorage.setItem('sh_comp_list_id',      document.getElementById('cfg_cu_list').value);
+  closeSettings();
+  showToast('Settings saved.', 'success');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, 5000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+renderKPIs();
+renderPerf();
+const today = new Date().toISOString().slice(0, 10);
+document.getElementById('reviewDate').value = today;
+document.getElementById('submitDate').value = today;
+</script>
+</body>
+</html>
