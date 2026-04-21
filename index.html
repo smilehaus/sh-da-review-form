@@ -83,7 +83,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .kpi-table tr:nth-child(even) td, .perf-table tr:nth-child(even) td { background: var(--alabaster); }
 .kpi-name, .crit-name { font-size: 14px; font-weight: 500; }
 .kpi-sub, .crit-desc { font-size: 12px; color: #5a4a3c; margin-top: 2px; }
-.kpi-target-input { border: none; background: transparent; font-family: var(--font-body); font-size: 13px; color: var(--earth); text-align: center; width: 100%; padding: 0; cursor: default; }
+.kpi-target-input { border: none; background: transparent; font-family: var(--font-body); font-size: 13px; color: #5a4a3c; text-align: center; width: 100%; padding: 0; cursor: default; }
 .kpi-target-input:not(:disabled) { border-bottom: 1px dashed var(--sandstone); cursor: text; background: #fffdf9; padding: 2px 4px; border-radius: 3px; }
 [contenteditable="true"] { outline: none; border-bottom: 1px dashed var(--sandstone); border-radius: 2px; cursor: text; background: #fffdf9; padding: 0 2px; }
 [contenteditable="true"]:focus { background: #fff8ee; border-bottom-color: var(--earth); }
@@ -704,6 +704,7 @@ function setScore(id, val) {
     btn.classList.toggle('active', String(btn.dataset.val) === String(val));
   });
   recalc();
+  saveFormState();
 }
 
 function passAllSkills(tierKey) {
@@ -719,7 +720,7 @@ function passAllSkills(tierKey) {
   });
   const btn = document.getElementById(`passAllBtn_${tierKey}`);
   if (btn) btn.classList.toggle('all-passed', !allAlreadyPassed);
-  recalc();
+  recalc(); saveFormState();
 }
 
 function failAllSkills(tierKey) {
@@ -765,6 +766,7 @@ function setSkill(tierKey, idx, state) {
   if (canBtn)    canBtn.className    = 'skill-btn' + (skillState[k] === 'can'    ? ' can-do'    : '');
   if (cannotBtn) cannotBtn.className = 'skill-btn' + (skillState[k] === 'cannot' ? ' cannot-do' : '');
   recalc();
+  saveFormState();
 }
 
 // ─── CALCULATION ─────────────────────────────────────────────────────────────
@@ -1244,6 +1246,101 @@ function showToast(msg, type = '') {
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+
+const SAVE_KEY = 'sh_da_review_data';
+let _saveTimer = null;
+
+function saveFormState() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    const state = { _scores: {...scores}, _skillState: {...skillState}, _dynamicSkills: {} };
+    // Regular inputs/selects/textareas
+    document.querySelectorAll('.main [id], .submit-section [id]').forEach(el => {
+      if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+        if (el.id && el.id !== 'pinInput') state[el.id] = el.value;
+      }
+    });
+    // Contenteditable fields
+    document.querySelectorAll('[data-editable][id]').forEach(el => {
+      state[el.id] = el.textContent;
+    });
+    // Dynamic added skills (beyond base TIER_SKILLS count)
+    ['T1','T2','T3','T4','T5','T6','T7'].forEach(k => {
+      const body = document.getElementById(`tierBody_${k}`);
+      if (!body) return;
+      const base = TIER_SKILLS[k].length;
+      const rows = body.querySelectorAll('.skill-row');
+      if (rows.length > base) {
+        state._dynamicSkills[k] = [];
+        for (let i = base; i < rows.length; i++) {
+          state._dynamicSkills[k].push(rows[i].querySelector('.skill-name')?.textContent || '');
+        }
+      }
+    });
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  }, 300);
+}
+
+function restoreFormState() {
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw) return;
+  let state;
+  try { state = JSON.parse(raw); } catch(e) { return; }
+
+  // Regular fields
+  Object.keys(state).filter(k => !k.startsWith('_')).forEach(id => {
+    const el = document.getElementById(id);
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
+      el.value = state[id];
+    }
+  });
+  // Contenteditable fields
+  document.querySelectorAll('[data-editable][id]').forEach(el => {
+    if (state[el.id] !== undefined) el.textContent = state[el.id];
+  });
+  // Scores
+  if (state._scores) {
+    Object.assign(scores, state._scores);
+    Object.keys(state._scores).forEach(id => {
+      const val = state._scores[id];
+      document.querySelectorAll(`[data-id="${id}"][data-val]`).forEach(btn => {
+        btn.classList.toggle('active', String(btn.dataset.val) === String(val));
+      });
+    });
+  }
+  // Skill states
+  if (state._skillState) {
+    Object.assign(skillState, state._skillState);
+    Object.keys(state._skillState).forEach(k => {
+      const parts = k.split('_'); // e.g. ["T1","0"]
+      const tierKey = parts[0], idx = parts[1];
+      const sv = state._skillState[k];
+      const canBtn    = document.getElementById(`skill_${tierKey}_${idx}_can`);
+      const cannotBtn = document.getElementById(`skill_${tierKey}_${idx}_cannot`);
+      if (canBtn)    canBtn.className = 'skill-btn' + (sv === 'can' ? ' can-do' : '');
+      if (cannotBtn) cannotBtn.className = 'skill-btn' + (sv === 'cannot' ? ' cannot-do' : '');
+    });
+  }
+  // Dynamic skills
+  if (state._dynamicSkills) {
+    Object.keys(state._dynamicSkills).forEach(tierKey => {
+      (state._dynamicSkills[tierKey] || []).forEach(text => {
+        addSkill(tierKey);
+        const body = document.getElementById(`tierBody_${tierKey}`);
+        const rows = body.querySelectorAll('.skill-row');
+        const nameEl = rows[rows.length - 1].querySelector('.skill-name');
+        if (nameEl) nameEl.textContent = text;
+      });
+    });
+  }
+  // Trigger tier badge/gate update
+  if (document.getElementById('currentTier').value) onTierChange(true);
+  recalc();
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
 renderKPIs();
 renderPerf();
 renderTierAccordion();
@@ -1251,6 +1348,11 @@ const today = new Date().toISOString().slice(0,10);
 document.getElementById('reviewDate').value = today;
 document.getElementById('submitDate').value = today;
 document.getElementById('employeeSigDate').value = today;
+restoreFormState();
+// Auto-save on any input change
+document.querySelector('.main').addEventListener('input', saveFormState);
+document.querySelector('.main').addEventListener('change', saveFormState);
+document.querySelector('.submit-section').addEventListener('input', saveFormState);
 </script>
 </body>
 </html>
