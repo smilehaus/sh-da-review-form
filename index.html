@@ -120,7 +120,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-accordion { border: 1px solid var(--sandstone); border-radius: var(--radius); overflow: hidden; margin-bottom: 0; }
 .tier-row { border-bottom: 1px solid var(--sandstone); }
 .tier-row:last-child { border-bottom: none; }
-.tier-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.tier-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; flex-wrap: nowrap; }
 .tier-header.current-tier { background: #f0ede6; }
 .tier-header.next-tier { background: #f5f0eb; }
 .tier-badge { font-size: 12px; font-weight: 700; background: var(--onyx); color: var(--white); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
@@ -662,7 +662,7 @@ function renderTierAccordion() {
         <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
         <div class="tier-action-btns">
           <button class="pass-all-btn" id="passAllBtn_${key}" onclick="passAllSkills('${key}')">✓ Pass All</button>
-          <button class="fail-all-btn" id="failAllBtn_${key}" onclick="failAllSkills('${key}')">✗ Not Yet Passed All</button>
+          <button class="fail-all-btn" id="failAllBtn_${key}" onclick="failAllSkills('${key}')">✗ Not Yet Passed</button>
         </div>
         <button class="tier-expand-btn" id="tierChevron_${key}" onclick="toggleTier('${key}')" title="Expand/collapse">›</button>
       </div>
@@ -944,10 +944,6 @@ function onRateChange() {
 function onTierChange(fromRate = false) {
   if (!fromRate) document.getElementById('tierAutoLabel').textContent = '';
   recalc();
-  const key = document.getElementById('currentTier').value;
-  if (!key) return;
-  openTier(key);
-  if (TIERS[key].next) openTier(TIERS[key].next);
 }
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────────────
