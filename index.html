@@ -127,6 +127,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-badge.current { background: var(--earth); }
 .tier-badge.next { background: var(--taupe); }
 .tier-title { font-size: 13px; font-weight: 500; flex: 1; }
+.add-skill-btn { font-family: var(--font-body); font-size: 12px; color: var(--earth); background: none; border: 1px dashed var(--sandstone); border-radius: 4px; padding: 4px 12px; cursor: pointer; width: 100%; text-align: left; margin-top: 4px; transition: all 0.12s; }
+.add-skill-btn:hover { border-color: var(--earth); background: #faf8f4; }
+body.form-locked .add-skill-btn { display: none; }
+.skill-name[contenteditable="true"]:empty:before { content: "Enter skill description…"; color: var(--taupe); font-style: italic; pointer-events: none; }
 .tier-rate { font-size: 12px; color: var(--taupe); flex-shrink: 0; }
 .tier-gate-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
 .gate-pass { background: #d4edda; color: #2d6a3f; }
@@ -653,7 +657,7 @@ function renderTierAccordion() {
     <div class="tier-row" id="tierRow_${key}">
       <div class="tier-header" id="tierToggle_${key}">
         <span class="tier-badge" id="tierBadge_${key}">${key}</span>
-        <span class="tier-title">${tier.label}</span>
+        <span class="tier-title" contenteditable="false" data-editable id="tierTitle_${key}">${tier.label}</span>
         <span class="tier-rate">${tier.rate}</span>
         <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
         <div class="tier-action-btns">
@@ -665,12 +669,15 @@ function renderTierAccordion() {
       <div class="tier-body" id="tierBody_${key}">
         ${skills.map((skill, idx) => `
           <div class="skill-row">
-            <span class="skill-name">${skill}</span>
+            <span class="skill-name" contenteditable="false" data-editable id="skillName_${key}_${idx}">${skill}</span>
             <div class="skill-btns">
               <button class="skill-btn" id="skill_${key}_${idx}_can" title="Can do" onclick="setSkill('${key}',${idx},'can')">✓</button>
               <button class="skill-btn" id="skill_${key}_${idx}_cannot" title="Cannot do" onclick="setSkill('${key}',${idx},'cannot')">✗</button>
             </div>
           </div>`).join('')}
+        <div class="add-skill-row" style="padding:6px 12px 10px;">
+          <button class="add-skill-btn" onclick="addSkill('${key}')">+ Add skill / job task</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -731,6 +738,23 @@ function failAllSkills(tierKey) {
   const passBtn = document.getElementById(`passAllBtn_${tierKey}`);
   if (passBtn) passBtn.classList.remove('all-passed');
   recalc();
+}
+
+function addSkill(tierKey) {
+  const tbody = document.getElementById(`tierBody_${tierKey}`);
+  const idx = tbody.querySelectorAll('.skill-row').length;
+  const row = document.createElement('div');
+  row.className = 'skill-row';
+  row.innerHTML = `
+    <span class="skill-name" contenteditable="true" data-editable id="skillName_${tierKey}_${idx}"></span>
+    <div class="skill-btns">
+      <button class="skill-btn" id="skill_${tierKey}_${idx}_can" title="Can do" onclick="setSkill('${tierKey}',${idx},'can')">✓</button>
+      <button class="skill-btn" id="skill_${tierKey}_${idx}_cannot" title="Cannot do" onclick="setSkill('${tierKey}',${idx},'cannot')">✗</button>
+    </div>`;
+  const addRow = tbody.querySelector('.add-skill-row');
+  tbody.insertBefore(row, addRow);
+  if (!tbody.classList.contains('open')) toggleTier(tierKey);
+  setTimeout(() => document.getElementById(`skillName_${tierKey}_${idx}`)?.focus(), 50);
 }
 
 function setSkill(tierKey, idx, state) {
