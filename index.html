@@ -120,13 +120,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-accordion { border: 1px solid var(--sandstone); border-radius: var(--radius); overflow: hidden; margin-bottom: 0; }
 .tier-row { border-bottom: 1px solid var(--sandstone); }
 .tier-row:last-child { border-bottom: none; }
-.tier-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; flex-wrap: nowrap; }
+.tier-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
 .tier-header.current-tier { background: #f0ede6; }
 .tier-header.next-tier { background: #f5f0eb; }
+.tier-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.tier-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .tier-badge { font-size: 12px; font-weight: 700; background: var(--onyx); color: var(--white); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
 .tier-badge.current { background: var(--earth); }
 .tier-badge.next { background: var(--taupe); }
-.tier-title { font-size: 13px; font-weight: 500; flex: 1; }
+.tier-title { font-size: 13px; font-weight: 500; }
 .add-skill-btn { font-family: var(--font-body); font-size: 12px; color: var(--earth); background: none; border: 1px dashed var(--sandstone); border-radius: 4px; padding: 4px 12px; cursor: pointer; width: 100%; text-align: left; margin-top: 4px; transition: all 0.12s; }
 .add-skill-btn:hover { border-color: var(--earth); background: #faf8f4; }
 body.form-locked .add-skill-btn { display: none; }
@@ -154,7 +156,6 @@ body.form-locked .add-skill-btn { display: none; }
 }
 .fail-all-btn:hover { background: #8a3a3a; color: #fff; }
 .fail-all-btn.all-failed { background: #8a3a3a; color: #fff; }
-.tier-action-btns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 
 .tier-body { display: none; border-top: 1px solid var(--sandstone); }
 .tier-body.open { display: block; }
@@ -717,15 +718,17 @@ function renderTierAccordion() {
     return `
     <div class="tier-row" id="tierRow_${key}">
       <div class="tier-header" id="tierToggle_${key}">
-        <span class="tier-badge" id="tierBadge_${key}">${key}</span>
-        <span class="tier-title" contenteditable="false" data-editable id="tierTitle_${key}">${tier.label}</span>
-        <span class="tier-rate">${tier.rate}</span>
-        <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
-        <div class="tier-action-btns">
+        <div class="tier-header-left">
+          <span class="tier-badge" id="tierBadge_${key}">${key}</span>
+          <span class="tier-title" contenteditable="false" data-editable id="tierTitle_${key}">${tier.label}</span>
+          <span class="tier-rate">${tier.rate}</span>
+          <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
+        </div>
+        <div class="tier-header-right">
           <button class="pass-all-btn" id="passAllBtn_${key}" onclick="passAllSkills('${key}')">✓ Pass All</button>
           <button class="fail-all-btn" id="failAllBtn_${key}" onclick="failAllSkills('${key}')">✗ Not Yet Passed</button>
+          <button class="tier-expand-btn" id="tierChevron_${key}" onclick="toggleTier('${key}')" title="Expand/collapse">›</button>
         </div>
-        <button class="tier-expand-btn" id="tierChevron_${key}" onclick="toggleTier('${key}')" title="Expand/collapse">›</button>
       </div>
       <div class="tier-body" id="tierBody_${key}">
         ${skills.map((skill, idx) => `
