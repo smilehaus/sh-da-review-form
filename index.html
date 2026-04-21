@@ -21,6 +21,15 @@ body { font-family: var(--font-body); background: var(--alabaster); color: var(-
 .site-header h1 { font-family: var(--font-head); color: var(--white); font-weight: 300; font-size: 22px; letter-spacing: 0.04em; flex: 1; text-align: center; }
 .settings-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--white); border-radius: var(--radius); padding: 6px 14px; cursor: pointer; font-family: var(--font-body); font-size: 13px; white-space: nowrap; }
 .settings-btn:hover { border-color: rgba(255,255,255,0.7); }
+.edit-lock-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: var(--white); border-radius: var(--radius); padding: 6px 14px; cursor: pointer; font-family: var(--font-body); font-size: 13px; white-space: nowrap; transition: all 0.15s; }
+.edit-lock-btn:hover { border-color: rgba(255,255,255,0.7); }
+.edit-lock-btn.locked { border-color: rgba(255,200,100,0.5); color: #ffd580; }
+.edit-lock-btn.locked:hover { border-color: #ffd580; }
+/* Locked form state */
+body.form-locked input:not(#pinInput), body.form-locked select, body.form-locked textarea { opacity: 0.7; pointer-events: none; background: #f5f3ef; }
+body.form-locked .skill-btn, body.form-locked .score-btn, body.form-locked .pass-all-btn, body.form-locked .tier-expand-btn, body.form-locked #submitBtn { pointer-events: none; opacity: 0.55; }
+body.form-locked .kpi-na-btn { pointer-events: none; opacity: 0.55; }
+.pin-error { color: #c0392b; font-size: 13px; margin-top: 6px; display: none; }
 
 /* Main */
 .main { max-width: 960px; margin: 0 auto; padding: 28px 24px 80px; }
@@ -107,10 +116,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-accordion { border: 1px solid var(--sandstone); border-radius: var(--radius); overflow: hidden; margin-bottom: 0; }
 .tier-row { border-bottom: 1px solid var(--sandstone); }
 .tier-row:last-child { border-bottom: none; }
-.tier-toggle { width: 100%; background: none; border: none; cursor: pointer; padding: 11px 16px; display: flex; align-items: center; gap: 12px; text-align: left; font-family: var(--font-body); }
-.tier-toggle:hover { background: var(--alabaster); }
-.tier-toggle.current-tier { background: #f0ede6; }
-.tier-toggle.next-tier { background: #f5f0eb; }
+.tier-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; }
+.tier-header.current-tier { background: #f0ede6; }
+.tier-header.next-tier { background: #f5f0eb; }
 .tier-badge { font-size: 12px; font-weight: 700; background: var(--onyx); color: var(--white); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
 .tier-badge.current { background: var(--earth); }
 .tier-badge.next { background: var(--taupe); }
@@ -119,10 +127,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-gate-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
 .gate-pass { background: #d4edda; color: #2d6a3f; }
 .gate-fail { background: #fde8e8; color: #8a3a3a; }
-.gate-partial { background: #fff3cd; color: #856404; }
-.gate-na { background: var(--sandstone); color: var(--onyx); opacity: 0.5; }
-.tier-chevron { font-size: 11px; color: var(--taupe); transition: transform 0.2s; flex-shrink: 0; }
-.tier-chevron.open { transform: rotate(180deg); }
+.tier-expand-btn { background: none; border: 1px solid var(--sandstone); border-radius: 4px; width: 28px; height: 26px; cursor: pointer; font-size: 15px; line-height: 1; color: var(--taupe); flex-shrink: 0; transition: transform 0.18s ease, border-color 0.15s, color 0.15s; display: flex; align-items: center; justify-content: center; transform: rotate(0deg); }
+.tier-expand-btn:hover { border-color: var(--earth); color: var(--earth); }
+.tier-expand-btn.open { transform: rotate(90deg); }
 .pass-all-btn {
   font-family: var(--font-body); font-size: 11px; font-weight: 600;
   background: #d4edda; border: 1.5px solid #2d6a3f; color: #2d6a3f;
@@ -131,6 +138,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 }
 .pass-all-btn:hover { background: #2d6a3f; color: #fff; }
 .pass-all-btn.all-passed { background: #2d6a3f; color: #fff; }
+.pass-all-row { padding: 8px 12px 4px; }
 
 .tier-body { display: none; border-top: 1px solid var(--sandstone); }
 .tier-body.open { display: block; }
@@ -215,7 +223,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 <header class="site-header">
   <img src="logo-white.png" alt="Smile Haus" onerror="this.style.display='none'">
   <h1>Dental Assistant Annual Review</h1>
-  <button class="settings-btn" onclick="openSettings()">&#9881; Settings</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="edit-lock-btn" id="editLockBtn" onclick="toggleLock()">&#128274; Lock</button>
+    <button class="settings-btn" onclick="openSettingsGated()">&#9881; Settings</button>
+  </div>
 </header>
 
 <div class="main">
@@ -421,12 +432,32 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
     <div class="modal-field"><label class="field-label">Public Key</label><input type="text" id="cfg_ejs_key" placeholder="your_public_key"></div>
     <div class="modal-field"><label class="field-label">Service ID</label><input type="text" id="cfg_ejs_svc" placeholder="service_xxxxxxx"></div>
     <div class="modal-field"><label class="field-label">Template ID</label><input type="text" id="cfg_ejs_tpl" placeholder="template_xxxxxxx"></div>
-    <div class="modal-section-label">ClickUp</div>
-    <div class="modal-field"><label class="field-label">API Token</label><input type="text" id="cfg_cu_token" placeholder="pk_..."></div>
-    <div class="modal-field"><label class="field-label">List ID (Employee Review)</label><input type="text" id="cfg_cu_list" placeholder="901415675091"></div>
+    <div class="modal-section-label">ClickUp (via Make.com Webhook)</div>
+    <div class="modal-field"><label class="field-label">Make.com Webhook URL</label><input type="text" id="cfg_make_webhook" placeholder="https://hook.us1.make.com/..."></div>
+    <div style="margin-top:8px;">
+      <button class="btn-cancel" id="cuTestBtn" onclick="testWebhook()" style="font-size:12px;padding:5px 12px;">&#128337; Test Webhook</button>
+      <div id="cuTestResult" style="font-size:12px;margin-top:6px;"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveSettings()">Save</button>
       <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN modal -->
+<div class="modal-overlay" id="pinModal" onclick="if(event.target===this)closePinModal()">
+  <div class="modal" style="max-width:340px;">
+    <h3>&#9998; Edit Form</h3>
+    <p class="modal-hint">Enter the PIN to unlock editing.</p>
+    <div class="modal-field">
+      <label class="field-label">PIN</label>
+      <input type="password" id="pinInput" placeholder="••••••••••••" onkeydown="if(event.key==='Enter')submitPin()" autocomplete="off">
+      <div class="pin-error" id="pinError">Incorrect PIN. Try again.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="submitPin()">Unlock</button>
+      <button class="btn-cancel" onclick="closePinModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -606,15 +637,17 @@ function renderTierAccordion() {
     const skills = TIER_SKILLS[key];
     return `
     <div class="tier-row" id="tierRow_${key}">
-      <button class="tier-toggle" id="tierToggle_${key}" onclick="toggleTier('${key}')">
+      <div class="tier-header" id="tierToggle_${key}">
         <span class="tier-badge" id="tierBadge_${key}">${key}</span>
         <span class="tier-title">${tier.label}</span>
         <span class="tier-rate">${tier.rate}</span>
         <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
-        <button class="pass-all-btn" id="passAllBtn_${key}" onclick="event.stopPropagation();passAllSkills('${key}')" title="Mark all skills ✓">✓ Pass All</button>
-        <span class="tier-chevron" id="tierChevron_${key}">▼</span>
-      </button>
+        <button class="tier-expand-btn" id="tierChevron_${key}" onclick="toggleTier('${key}')" title="Expand/collapse">›</button>
+      </div>
       <div class="tier-body" id="tierBody_${key}">
+        <div class="pass-all-row">
+          <button class="pass-all-btn" id="passAllBtn_${key}" onclick="passAllSkills('${key}')" title="Mark all skills ✓">✓ Pass All</button>
+        </div>
         ${skills.map((skill, idx) => `
           <div class="skill-row">
             <span class="skill-name">${skill}</span>
@@ -842,8 +875,8 @@ async function handleSubmit() {
     showToast('Fill in DA Name, Office, Tier, and OM Signature before submitting.', 'error'); return;
   }
   const cfg = getConfig();
-  if (!cfg.ejsKey && !cfg.cuToken) {
-    showToast('Open Settings and configure EmailJS and/or ClickUp first.', 'error'); return;
+  if (!cfg.ejsKey && !cfg.makeWebhook) {
+    showToast('Open Settings and configure EmailJS and/or Make.com webhook first.', 'error'); return;
   }
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'Submitting…';
@@ -863,18 +896,25 @@ async function handleSubmit() {
     } catch(e) { console.error('EmailJS:', e); }
   }
 
-  if (cfg.cuToken && cfg.cuList) {
+  if (cfg.makeWebhook) {
     try {
-      const res = await fetch(`https://api.clickup.com/api/v2/list/${cfg.cuList}/task`, {
+      const res = await fetch(cfg.makeWebhook, {
         method: 'POST',
-        headers: { 'Authorization': cfg.cuToken, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `DA Raise Review — ${daName} — ${office} — ${document.getElementById('reviewDate').value || new Date().toISOString().slice(0,10)}`,
-          description: summary.text, priority: 2,
+          task_name: `DA Raise Review — ${daName} — ${office} — ${document.getElementById('reviewDate').value || new Date().toISOString().slice(0,10)}`,
+          da_name: daName, office, tier,
+          score: document.getElementById('totalScore')?.textContent || '—',
+          raise: document.getElementById('raisePreview')?.textContent || '—',
+          new_rate: document.getElementById('newRatePreview')?.textContent || '—',
+          band: document.getElementById('bandName')?.textContent || '—',
+          reviewer: document.getElementById('reviewerName')?.value || '—',
+          review_date: document.getElementById('reviewDate')?.value || '—',
+          summary: summary.text,
         }),
       });
-      if (res.ok) clickupOk = true;
-    } catch(e) { console.error('ClickUp:', e); }
+      if (res.ok || res.status === 200) clickupOk = true;
+    } catch(e) { console.error('Make webhook:', e); }
   }
 
   btn.disabled = false; btn.textContent = 'Submit for Approval';
@@ -882,7 +922,7 @@ async function handleSubmit() {
   if (emailOk) parts.push('Email sent ✓');
   else if (cfg.ejsKey) parts.push('Email failed — check EmailJS settings');
   if (clickupOk) parts.push('ClickUp task created ✓');
-  else if (cfg.cuToken) parts.push('ClickUp failed — check list ID');
+  else if (cfg.makeWebhook) parts.push('ClickUp failed — check webhook URL');
   showToast(parts.join('  ·  ') || 'Done', emailOk || clickupOk ? 'success' : 'error');
 }
 
@@ -981,24 +1021,25 @@ function buildSummary() {
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
+const DEFAULT_EMAILS = 'saomongmo@gmail.com, cfarndds@gmail.com, lacy.smilehaus@gmail.com';
+const DEFAULT_WEBHOOK = 'https://hook.us2.make.com/8mvfz7pjf3unipf4whnropmwqiit42wx';
+
 function getConfig() {
   return {
-    email:  localStorage.getItem('sh_approval_email') || '',
-    ejsKey: localStorage.getItem('sh_emailjs_key')    || '',
-    ejsSvc: localStorage.getItem('sh_emailjs_service')|| '',
-    ejsTpl: localStorage.getItem('sh_emailjs_template')|| '',
-    cuToken:localStorage.getItem('sh_clickup_token')  || '',
-    cuList: localStorage.getItem('sh_comp_list_id')   || '',
+    email:      localStorage.getItem('sh_approval_email') || DEFAULT_EMAILS,
+    ejsKey:     localStorage.getItem('sh_emailjs_key')    || '',
+    ejsSvc:     localStorage.getItem('sh_emailjs_service')|| '',
+    ejsTpl:     localStorage.getItem('sh_emailjs_template')|| '',
+    makeWebhook:localStorage.getItem('sh_make_webhook')   || DEFAULT_WEBHOOK,
   };
 }
 function openSettings() {
   const c = getConfig();
-  document.getElementById('cfg_email').value = c.email;
-  document.getElementById('cfg_ejs_key').value = c.ejsKey;
-  document.getElementById('cfg_ejs_svc').value = c.ejsSvc;
-  document.getElementById('cfg_ejs_tpl').value = c.ejsTpl;
-  document.getElementById('cfg_cu_token').value = c.cuToken;
-  document.getElementById('cfg_cu_list').value = c.cuList;
+  document.getElementById('cfg_email').value       = c.email;
+  document.getElementById('cfg_ejs_key').value     = c.ejsKey;
+  document.getElementById('cfg_ejs_svc').value     = c.ejsSvc;
+  document.getElementById('cfg_ejs_tpl').value     = c.ejsTpl;
+  document.getElementById('cfg_make_webhook').value = c.makeWebhook;
   document.getElementById('settingsModal').classList.add('show');
 }
 function saveSettings() {
@@ -1006,11 +1047,105 @@ function saveSettings() {
   localStorage.setItem('sh_emailjs_key',      document.getElementById('cfg_ejs_key').value);
   localStorage.setItem('sh_emailjs_service',  document.getElementById('cfg_ejs_svc').value);
   localStorage.setItem('sh_emailjs_template', document.getElementById('cfg_ejs_tpl').value);
-  localStorage.setItem('sh_clickup_token',    document.getElementById('cfg_cu_token').value);
-  localStorage.setItem('sh_comp_list_id',     document.getElementById('cfg_cu_list').value);
+  localStorage.setItem('sh_make_webhook',     document.getElementById('cfg_make_webhook').value);
   closeSettings(); showToast('Settings saved.', 'success');
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+
+async function testWebhook() {
+  const url = document.getElementById('cfg_make_webhook').value.trim();
+  const resultEl = document.getElementById('cuTestResult');
+  const btn = document.getElementById('cuTestBtn');
+  if (!url) {
+    resultEl.style.color = '#c0392b';
+    resultEl.textContent = 'Enter the Make.com Webhook URL first.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Testing…';
+  resultEl.textContent = '';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ test: true, source: 'DA Review Form connection test' }),
+    });
+    if (res.ok || res.status === 200) {
+      resultEl.style.color = '#2d6a3f';
+      resultEl.textContent = '✓ Webhook reachable — Make.com received the ping.';
+    } else {
+      resultEl.style.color = '#c0392b';
+      resultEl.textContent = `✗ Webhook returned status ${res.status} — check the URL.`;
+    }
+  } catch(e) {
+    resultEl.style.color = '#c0392b';
+    resultEl.textContent = '✗ Network error — check the URL and try again.';
+  }
+  btn.disabled = false; btn.textContent = '🕗 Test Webhook';
+}
+
+// ─── LOCK / EDIT ─────────────────────────────────────────────────────────────
+
+const FORM_PIN = 'smilehaus2024';
+let formLocked = false;
+
+function toggleLock() {
+  if (formLocked) {
+    openPinModal();
+  } else {
+    lockForm();
+  }
+}
+function getFormFields() {
+  return document.querySelectorAll(
+    'input:not(#pinInput), select, textarea, button.score-btn, button.skill-btn, button.pass-all-btn, button.kpi-na-btn, button.tier-expand-btn, #submitBtn'
+  );
+}
+function lockForm() {
+  formLocked = true;
+  getFormFields().forEach(el => el.disabled = true);
+  document.body.classList.add('form-locked');
+  const btn = document.getElementById('editLockBtn');
+  btn.textContent = '\u270E Edit';
+  btn.classList.add('locked');
+  showToast('Form locked.', '');
+}
+function unlockForm() {
+  formLocked = false;
+  getFormFields().forEach(el => el.disabled = false);
+  document.body.classList.remove('form-locked');
+  const btn = document.getElementById('editLockBtn');
+  btn.innerHTML = '&#128274; Lock';
+  btn.classList.remove('locked');
+  showToast('Form unlocked. You can now edit.', 'success');
+}
+let pinCallback = null;
+
+function openPinModal(onSuccess) {
+  pinCallback = onSuccess || null;
+  document.getElementById('pinInput').value = '';
+  document.getElementById('pinError').style.display = 'none';
+  document.getElementById('pinModal').classList.add('show');
+  setTimeout(() => document.getElementById('pinInput').focus(), 80);
+}
+function closePinModal() {
+  document.getElementById('pinModal').classList.remove('show');
+  pinCallback = null;
+}
+function submitPin() {
+  const val = document.getElementById('pinInput').value;
+  if (val === FORM_PIN) {
+    closePinModal();
+    if (pinCallback) pinCallback();
+    else unlockForm();
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+function openSettingsGated() {
+  openPinModal(() => openSettings());
+}
 
 // ─── TOAST ───────────────────────────────────────────────────────────────────
 
