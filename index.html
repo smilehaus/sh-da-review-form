@@ -587,6 +587,67 @@ const PERF_SECTIONS = [
   ]},
 ];
 
+// ─── CLICKUP CUSTOM FIELD IDs ────────────────────────────────────────────────
+
+const CF = {
+  DA_NAME:    '7e99e9cd-745c-47d9-865d-32a408855e6b',
+  HOME_OFFICE:'9c6bbd3b-65af-4f58-8db2-12ffc1c977f8',
+  HOME_OFFICE_OPTS: { 'Georgetown':'e5209636-677e-40bd-ba5a-cdd43a1a76aa','On the Square':'7178f463-dfb2-4c54-9ba1-a4515a4718ff','Austin':'5e0e7c00-66f3-4763-b2d5-b299b66e8d8e','Implant Center':'51fcc93d-6e08-433c-b242-50a1260f3f90','Medical Parkway':'974e0f7b-3c37-4c69-9940-cf8579e39348','Arboretum':'6eb75682-7de5-4d0e-8ff7-85809a52b807','Pflugerville':'c9870d6f-4cbc-4511-a53b-e610281f567f','South Austin':'c826cbb5-6f1c-4cad-b919-bbdf8f7635ec','New Braunfels Dental Arts':'a2ea3512-587f-456f-a622-c45cc434ba2b','Anderson Mill':'434453ee-89c6-4eb9-a8c0-14d7e71a7688' },
+  CURRENT_TIER:'1a3b19b0-6cce-4f66-93d5-d8e5ca12f2a6',
+  TIER_OPTS: { 'T1':'b0aa8ef9-af27-4a61-b6f9-a16fead493ad','T2':'6134604f-fd86-427c-ab4b-71197cf59cf0','T3':'0c22559c-7461-489b-b2c3-7032ff0a323f','T4':'089cb50a-3cd1-4174-b99b-ed435d030092','T5':'39008eef-7efc-49b6-9bae-1d54352d9837','T6':'fc11b86b-f9aa-4238-8b6f-3aabda21f5de','T7':'25099a83-4a39-4936-a1cf-c78c1253ceb8' },
+  CURRENT_RATE:  '9ba6e30b-20f6-4b34-9a26-c8683def15b4',
+  REVIEW_PERIOD: '96d77be1-08b9-4192-82fb-8ca1d8229f72',
+  REVIEWER_NAME: '303a63c3-6e10-46d6-8d29-3f13c52cca0e',
+  REVIEW_DATE:   '933ff3b7-a4db-43d7-ad5d-99ef49b986de',
+  KPI_SCORE:     '70357de3-d5f6-4f73-b7b8-c4043e3b2712',
+  PERF_SCORE:    '12bd1ea2-ead4-452b-93b2-148cbbb2543e',
+  TOTAL_SCORE:   '77c85b62-11ec-4ee9-a28a-7afce33faae8',
+  GATE_A:        '5e5b6db3-84ae-4ff7-a49f-1bd96353d04c',
+  GATE_B:        'e5399d96-fe8b-470a-8d47-b3eb8ec0c519',
+  RAISE_AMOUNT:  '938d40cb-8bea-4414-b6e7-f79a88bb806a',
+  NEW_RATE:      'fcf08bac-5bb8-493b-8a1a-0c32ebd51a1b',
+  OUTCOME_BAND:  'c55b9bc8-770a-4333-90a4-626080b348bd',
+  BAND_OPTS: { 'PIP':'5b1113e4-fabb-4d2f-a925-e24a0dc4a592','Coaching Plan':'710f9d5e-0763-41a3-a8c5-aae7c321ccda','Within-Tier Raise':'319fabd9-74c9-4cc5-8b12-6c005fb52d87','Promote':'f12ee967-ce2a-42b8-91c6-c0af12906c54' },
+  TARGET_TIER:   'd66320fd-1aa9-4f6a-b6cb-020fcf4547bb',
+  TARGET_TIER_OPTS: { 'T1':'a3610c82-60b1-4227-834a-45d82620200e','T2':'c6e5e0fd-a576-4e72-ad9c-666b832317ea','T3':'d1220e77-1277-4a5a-a7e9-a423fe620c4a','T4':'87a41ea3-a384-4bb4-8201-d7d72c5f30d2','T5':'4666eb4b-156f-4e00-80cc-ef09e70184ee','T6':'5c88c0f7-8a33-466f-b9dc-29b765f580e0','T7':'bb75cad5-08c8-4759-9425-0cb98eba8640' },
+};
+
+function buildCustomFields() {
+  const f  = id => document.getElementById(id)?.value || '';
+  const t  = id => (document.getElementById(id)?.textContent || '').replace(/[^0-9.-]/g,'');
+  const num = id => { const v = parseFloat(t(id)); return isNaN(v) ? null : v; };
+
+  const office    = f('homeOffice');
+  const tier      = f('currentTier');
+  const band      = (document.getElementById('bandName')?.textContent || '').trim();
+  const targetTier= f('targetTier');
+  const gateA     = (document.getElementById('gateAStatus')?.textContent || '').includes('✓');
+  const gateB     = (document.getElementById('gateBStatus')?.textContent || '').includes('✓');
+  const reviewDateVal = f('reviewDate');
+  const reviewDateMs  = reviewDateVal ? new Date(reviewDateVal).getTime() : null;
+
+  const fields = [
+    { id: CF.DA_NAME,       value: f('daName') },
+    { id: CF.CURRENT_RATE,  value: parseFloat(f('currentRate')) || null },
+    { id: CF.REVIEW_PERIOD, value: f('reviewPeriod') },
+    { id: CF.REVIEWER_NAME, value: f('reviewerName') },
+    { id: CF.KPI_SCORE,     value: num('p1Total') },
+    { id: CF.PERF_SCORE,    value: num('p2Total') },
+    { id: CF.TOTAL_SCORE,   value: num('totalScore') },
+    { id: CF.GATE_A,        value: gateA },
+    { id: CF.GATE_B,        value: gateB },
+    { id: CF.RAISE_AMOUNT,  value: num('raisePreview') },
+    { id: CF.NEW_RATE,      value: num('newRatePreview') },
+  ];
+  if (CF.HOME_OFFICE_OPTS[office])  fields.push({ id: CF.HOME_OFFICE,  value: CF.HOME_OFFICE_OPTS[office] });
+  if (CF.TIER_OPTS[tier])           fields.push({ id: CF.CURRENT_TIER, value: CF.TIER_OPTS[tier] });
+  if (CF.BAND_OPTS[band])           fields.push({ id: CF.OUTCOME_BAND, value: CF.BAND_OPTS[band] });
+  if (CF.TARGET_TIER_OPTS[targetTier]) fields.push({ id: CF.TARGET_TIER, value: CF.TARGET_TIER_OPTS[targetTier] });
+  if (reviewDateMs)                 fields.push({ id: CF.REVIEW_DATE,  value: reviewDateMs });
+
+  return fields.filter(f => f.value !== null && f.value !== '' && f.value !== undefined);
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 
 const scores = {};     // kpi/perf item scores: 1–5 or 'na'
@@ -982,19 +1043,32 @@ async function handleSubmit() {
 
   if (cfg.makeWebhook) {
     try {
+      const reviewDate = document.getElementById('reviewDate')?.value || new Date().toISOString().slice(0,10);
+      const taskName = `DA Raise Review — ${daName} — ${office} — ${reviewDate}`;
+      const customFields = buildCustomFields();
+      const taskBody = JSON.stringify({
+        name: taskName,
+        description: summary.text,
+        priority: 2,
+        custom_fields: customFields,
+      });
+      const formSnapshot = buildFormSnapshot(summary);
       const res = await fetch(cfg.makeWebhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          task_name: `DA Raise Review — ${daName} — ${office} — ${document.getElementById('reviewDate').value || new Date().toISOString().slice(0,10)}`,
+          task_name: taskName,
+          task_body: taskBody,
           da_name: daName, office, tier,
+          review_date: reviewDate,
           score: document.getElementById('totalScore')?.textContent || '—',
           raise: document.getElementById('raisePreview')?.textContent || '—',
           new_rate: document.getElementById('newRatePreview')?.textContent || '—',
           band: document.getElementById('bandName')?.textContent || '—',
           reviewer: document.getElementById('reviewerName')?.value || '—',
-          review_date: document.getElementById('reviewDate')?.value || '—',
           summary: summary.text,
+          form_html_b64: formSnapshot,
+          form_filename: `DA_Review_${daName.replace(/\s+/g,'_')}_${reviewDate}.html`,
         }),
       });
       if (res.ok || res.status === 200) clickupOk = true;
@@ -1101,6 +1175,94 @@ function buildSummary() {
 </div>`;
 
   return { text, html };
+}
+
+function buildFormSnapshot(summary) {
+  const f = id => document.getElementById(id)?.value || '—';
+  const t = id => document.getElementById(id)?.textContent || '—';
+
+  // KPI detail rows
+  const kpiRows = KPIS.map(k => {
+    const sc = scores[k.id];
+    const display = sc === 'na' ? 'N/A' : (sc || '—');
+    return `<tr><td style="padding:5px 10px;">${document.getElementById('kpiName_'+k.id)?.textContent || k.name}</td><td style="padding:5px 10px;text-align:center;">${display}</td></tr>`;
+  }).join('');
+
+  // Performance detail rows
+  const perfRows = PERF_SECTIONS.map(sec => {
+    const itemRows = sec.items.map(item => {
+      const sc = scores[item.id];
+      return `<tr><td style="padding:4px 10px 4px 20px;font-size:12px;">${item.name}</td><td style="padding:4px 10px;text-align:center;font-size:12px;">${sc || '—'}</td></tr>`;
+    }).join('');
+    return `<tr style="background:#f5f3ef"><td colspan="2" style="padding:6px 10px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">${sec.title}</td></tr>${itemRows}`;
+  }).join('');
+
+  // Tier skill rows
+  const tierRows = Object.keys(TIER_SKILLS).map(tk => {
+    const skills = TIER_SKILLS[tk];
+    const header = `<tr style="background:#2A2E31;color:#fff"><td colspan="2" style="padding:6px 10px;font-size:12px;font-weight:700;">Tier ${tk.replace('T','')} — ${TIERS[tk].label}</td></tr>`;
+    const rows = skills.map((skill, idx) => {
+      const state = skillState[`${tk}_${idx}`];
+      const display = state === 'can' ? '✓ Can Do' : (state === 'cannot' ? '✗ Not Yet' : '—');
+      const color = state === 'can' ? '#2d6a3f' : (state === 'cannot' ? '#c0392b' : '#888');
+      return `<tr><td style="padding:4px 10px 4px 20px;font-size:12px;">${skill}</td><td style="padding:4px 10px;text-align:center;font-size:12px;color:${color};font-weight:600;">${display}</td></tr>`;
+    }).join('');
+    return header + rows;
+  }).join('');
+
+  const doc = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>DA Annual Review — ${f('daName')} — ${f('reviewDate')}</title>
+<style>body{font-family:Arial,sans-serif;color:#2A2E31;max-width:760px;margin:0 auto;padding:20px}table{width:100%;border-collapse:collapse}td{vertical-align:top}h2{font-family:Georgia,serif;font-weight:300;margin:24px 0 8px}.section-hdr{background:#877765;color:#fff;padding:10px 14px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:24px}@media print{.no-print{display:none}}</style>
+</head><body>
+<div style="background:#2A2E31;color:#F2EFE8;padding:16px 20px;margin-bottom:24px">
+  <div style="font-family:Georgia,serif;font-size:18px;font-weight:300;">Smile Haus — DA Annual Review &amp; Compensation Form</div>
+  <div style="font-size:12px;opacity:0.6;margin-top:4px;">Submitted ${new Date().toLocaleString()}</div>
+</div>
+
+<div class="section-hdr">Employee Info</div>
+<table><tr><td style="padding:6px 10px;width:160px;font-weight:600;color:#877765;">DA Name</td><td style="padding:6px 10px;">${f('daName')}</td><td style="padding:6px 10px;width:160px;font-weight:600;color:#877765;">Home Office</td><td style="padding:6px 10px;">${f('homeOffice')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Current Tier</td><td style="padding:6px 10px;">${f('currentTier')}</td><td style="padding:6px 10px;font-weight:600;color:#877765;">Current Rate</td><td style="padding:6px 10px;">$${f('currentRate')}/hr</td></tr>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;">Review Period</td><td style="padding:6px 10px;">${f('reviewPeriod')}</td><td style="padding:6px 10px;font-weight:600;color:#877765;">Review Date</td><td style="padding:6px 10px;">${f('reviewDate')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Reviewer</td><td colspan="3" style="padding:6px 10px;">${f('reviewerName')}</td></tr></table>
+
+<div class="section-hdr">Part I — KPI Performance (${t('p1Total')} / ${t('p1Max')})</div>
+<table><tr style="background:#2A2E31;color:#fff"><td style="padding:6px 10px;font-size:12px;font-weight:700;">KPI</td><td style="padding:6px 10px;font-size:12px;font-weight:700;text-align:center;width:80px;">Score</td></tr>${kpiRows}</table>
+${f('kpiNotes') !== '—' ? `<div style="margin:8px 0;padding:8px 10px;background:#f5f3ef;font-size:12px;"><b>Notes:</b> ${f('kpiNotes')}</div>` : ''}
+
+<div class="section-hdr">Part II — In-Office Performance (${t('p2Total')} / 75)</div>
+<table><tr style="background:#2A2E31;color:#fff"><td style="padding:6px 10px;font-size:12px;font-weight:700;">Item</td><td style="padding:6px 10px;font-size:12px;font-weight:700;text-align:center;width:80px;">Score</td></tr>${perfRows}</table>
+
+<div class="section-hdr">Tier Competency Checklist</div>
+<table>${tierRows}</table>
+
+<div class="section-hdr">Results &amp; Compensation</div>
+<table>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;">Total Score</td><td style="padding:6px 10px;">${t('totalScore')} / ${t('totalMax')} — ${t('bandName')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Gate A</td><td style="padding:6px 10px;">${t('gateAStatus')}</td></tr>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;">Gate B</td><td style="padding:6px 10px;">${t('gateBStatus')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Raise</td><td style="padding:6px 10px;">${t('raisePreview')}</td></tr>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;">New Rate</td><td style="padding:6px 10px;">${t('newRatePreview')}</td></tr>
+</table>
+
+<div class="section-hdr">Review Narrative</div>
+<table>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;width:160px;">Strengths</td><td style="padding:6px 10px;">${f('strengths')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Growth Areas</td><td style="padding:6px 10px;">${f('growthAreas')}</td></tr>
+<tr><td style="padding:6px 10px;font-weight:600;color:#877765;">Goals (12 mo)</td><td style="padding:6px 10px;">${f('goals')}</td></tr>
+<tr style="background:#f5f3ef"><td style="padding:6px 10px;font-weight:600;color:#877765;">Employee Response</td><td style="padding:6px 10px;">${f('employeeComments')}</td></tr>
+</table>
+
+<div style="margin-top:24px;padding:12px 14px;border-top:2px solid #2A2E31;font-size:12px;color:#877765;">
+  OM Signature: <b>${f('omSignature')}</b> &nbsp;·&nbsp; Employee Signature: <b>${f('employeeSig')}</b>
+</div>
+</body></html>`;
+
+  try {
+    return btoa(unescape(encodeURIComponent(doc)));
+  } catch(e) {
+    return btoa(doc);
+  }
 }
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
