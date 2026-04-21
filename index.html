@@ -27,7 +27,7 @@ body { font-family: var(--font-body); background: var(--alabaster); color: var(-
 .edit-lock-btn.locked:hover { border-color: #ffd580; }
 /* Locked form state */
 body.form-locked input:not(#pinInput), body.form-locked select, body.form-locked textarea { opacity: 0.7; pointer-events: none; background: #f5f3ef; }
-body.form-locked .skill-btn, body.form-locked .score-btn, body.form-locked .pass-all-btn, body.form-locked .tier-expand-btn, body.form-locked #submitBtn { pointer-events: none; opacity: 0.55; }
+body.form-locked .skill-btn, body.form-locked .score-btn, body.form-locked .pass-all-btn, body.form-locked .fail-all-btn, body.form-locked .tier-expand-btn, body.form-locked #submitBtn { pointer-events: none; opacity: 0.55; }
 body.form-locked .kpi-na-btn { pointer-events: none; opacity: 0.55; }
 .pin-error { color: #c0392b; font-size: 13px; margin-top: 6px; display: none; }
 
@@ -82,7 +82,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .kpi-table tr:last-child td, .perf-table tr:last-child td { border-bottom: none; }
 .kpi-table tr:nth-child(even) td, .perf-table tr:nth-child(even) td { background: var(--alabaster); }
 .kpi-name, .crit-name { font-size: 14px; font-weight: 500; }
-.kpi-sub, .crit-desc { font-size: 12px; color: var(--taupe); margin-top: 2px; }
+.kpi-sub, .crit-desc { font-size: 12px; color: #5a4a3c; margin-top: 2px; }
+.kpi-target-input { border: none; background: transparent; font-family: var(--font-body); font-size: 13px; color: var(--earth); text-align: center; width: 100%; padding: 0; cursor: default; }
+.kpi-target-input:not(:disabled) { border-bottom: 1px dashed var(--sandstone); cursor: text; background: #fffdf9; padding: 2px 4px; border-radius: 3px; }
+[contenteditable="true"] { outline: none; border-bottom: 1px dashed var(--sandstone); border-radius: 2px; cursor: text; background: #fffdf9; padding: 0 2px; }
+[contenteditable="true"]:focus { background: #fff8ee; border-bottom-color: var(--earth); }
 
 /* Score buttons (1-5) */
 .score-group { display: flex; gap: 4px; justify-content: center; }
@@ -138,7 +142,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 }
 .pass-all-btn:hover { background: #2d6a3f; color: #fff; }
 .pass-all-btn.all-passed { background: #2d6a3f; color: #fff; }
-.pass-all-row { padding: 8px 12px 4px; }
+.fail-all-btn {
+  font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  background: #fde8e8; border: 1.5px solid #8a3a3a; color: #8a3a3a;
+  border-radius: 4px; padding: 3px 9px; cursor: pointer; flex-shrink: 0;
+  transition: all 0.12s; white-space: nowrap;
+}
+.fail-all-btn:hover { background: #8a3a3a; color: #fff; }
+.fail-all-btn.all-failed { background: #8a3a3a; color: #fff; }
+.tier-action-btns { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 
 .tier-body { display: none; border-top: 1px solid var(--sandstone); }
 .tier-body.open { display: block; }
@@ -582,10 +594,12 @@ function renderKPIs() {
   document.getElementById('kpiBody').innerHTML = KPIS.map(k => `
     <tr>
       <td>
-        <div class="kpi-name">${k.name}</div>
-        ${k.sub ? `<div class="kpi-sub">${k.sub}</div>` : ''}
+        <div class="kpi-name" contenteditable="false" data-editable id="kpiName_${k.id}">${k.name}</div>
+        ${k.sub ? `<div class="kpi-sub" contenteditable="false" data-editable id="kpiSub_${k.id}">${k.sub}</div>` : ''}
       </td>
-      <td style="text-align:center;font-size:13px;color:var(--earth);">${k.target}</td>
+      <td style="text-align:center;">
+        <input class="kpi-target-input" id="kpiTarget_${k.id}" value="${k.target}" disabled>
+      </td>
       <td>
         <div class="score-group">
           ${[1,2,3,4,5].map(v => `<button class="score-btn" data-id="${k.id}" data-val="${v}" onclick="setScore('${k.id}',${v})">${v}</button>`).join('')}
@@ -609,8 +623,8 @@ function renderPerf() {
         ${sec.items.map(item => `
           <tr>
             <td>
-              <div class="crit-name">${item.name}</div>
-              <div class="crit-desc">${item.desc}</div>
+              <div class="crit-name" contenteditable="false" data-editable id="critName_${item.id}">${item.name}</div>
+              <div class="crit-desc" contenteditable="false" data-editable id="critDesc_${item.id}">${item.desc}</div>
             </td>
             <td>
               <div class="score-group">
@@ -642,12 +656,13 @@ function renderTierAccordion() {
         <span class="tier-title">${tier.label}</span>
         <span class="tier-rate">${tier.rate}</span>
         <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
+        <div class="tier-action-btns">
+          <button class="pass-all-btn" id="passAllBtn_${key}" onclick="passAllSkills('${key}')">✓ Pass All</button>
+          <button class="fail-all-btn" id="failAllBtn_${key}" onclick="failAllSkills('${key}')">✗ Not Yet Passed All</button>
+        </div>
         <button class="tier-expand-btn" id="tierChevron_${key}" onclick="toggleTier('${key}')" title="Expand/collapse">›</button>
       </div>
       <div class="tier-body" id="tierBody_${key}">
-        <div class="pass-all-row">
-          <button class="pass-all-btn" id="passAllBtn_${key}" onclick="passAllSkills('${key}')" title="Mark all skills ✓">✓ Pass All</button>
-        </div>
         ${skills.map((skill, idx) => `
           <div class="skill-row">
             <span class="skill-name">${skill}</span>
@@ -697,6 +712,24 @@ function passAllSkills(tierKey) {
   });
   const btn = document.getElementById(`passAllBtn_${tierKey}`);
   if (btn) btn.classList.toggle('all-passed', !allAlreadyPassed);
+  recalc();
+}
+
+function failAllSkills(tierKey) {
+  const skills = TIER_SKILLS[tierKey];
+  const allAlreadyFailed = skills.every((_, idx) => skillState[`${tierKey}_${idx}`] === 'cannot');
+  skills.forEach((_, idx) => {
+    const k = `${tierKey}_${idx}`;
+    skillState[k] = allAlreadyFailed ? null : 'cannot';
+    const canBtn    = document.getElementById(`skill_${tierKey}_${idx}_can`);
+    const cannotBtn = document.getElementById(`skill_${tierKey}_${idx}_cannot`);
+    if (canBtn)    canBtn.className = 'skill-btn';
+    if (cannotBtn) cannotBtn.className = 'skill-btn' + (!allAlreadyFailed ? ' cannot-do' : '');
+  });
+  const btn = document.getElementById(`failAllBtn_${tierKey}`);
+  if (btn) btn.classList.toggle('all-failed', !allAlreadyFailed);
+  const passBtn = document.getElementById(`passAllBtn_${tierKey}`);
+  if (passBtn) passBtn.classList.remove('all-passed');
   recalc();
 }
 
@@ -777,7 +810,7 @@ function recalc() {
     badge.className = 'tier-badge' + (k === tierKey ? ' current' : tier && tier.next === k ? ' next' : '');
     const gs = getTierGateStatus(k);
     statusEl.className = 'tier-gate-status ' + (gs === 'pass' ? 'gate-pass' : gs === 'fail' ? 'gate-fail' : '');
-    statusEl.textContent = gs === 'pass' ? '✓ Pass' : gs === 'fail' ? '✗ Fail' : '';
+    statusEl.textContent = gs === 'pass' ? '✓ Pass' : gs === 'fail' ? '✗ Not Yet Passed' : '';
     const passBtn = document.getElementById(`passAllBtn_${k}`);
     if (passBtn) passBtn.classList.toggle('all-passed', gs === 'pass');
   });
@@ -1021,7 +1054,7 @@ function buildSummary() {
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
-const DEFAULT_EMAILS = 'saomongmo@gmail.com, cfarndds@gmail.com, lacy.smilehaus@gmail.com';
+const DEFAULT_EMAILS = 'saomongmo@gmail.com';
 const DEFAULT_WEBHOOK = 'https://hook.us2.make.com/8mvfz7pjf3unipf4whnropmwqiit42wx';
 
 function getConfig() {
@@ -1097,12 +1130,16 @@ function toggleLock() {
 }
 function getFormFields() {
   return document.querySelectorAll(
-    'input:not(#pinInput), select, textarea, button.score-btn, button.skill-btn, button.pass-all-btn, button.kpi-na-btn, button.tier-expand-btn, #submitBtn'
+    '.main input, .main select, .main textarea, .submit-section input, button.score-btn, button.skill-btn, button.pass-all-btn, button.fail-all-btn, button.kpi-na-btn, button.tier-expand-btn, #submitBtn'
   );
+}
+function getEditables() {
+  return document.querySelectorAll('[data-editable]');
 }
 function lockForm() {
   formLocked = true;
   getFormFields().forEach(el => el.disabled = true);
+  getEditables().forEach(el => { el.contentEditable = 'false'; });
   document.body.classList.add('form-locked');
   const btn = document.getElementById('editLockBtn');
   btn.textContent = '\u270E Edit';
@@ -1112,6 +1149,7 @@ function lockForm() {
 function unlockForm() {
   formLocked = false;
   getFormFields().forEach(el => el.disabled = false);
+  getEditables().forEach(el => { el.contentEditable = 'true'; });
   document.body.classList.remove('form-locked');
   const btn = document.getElementById('editLockBtn');
   btn.innerHTML = '&#128274; Lock';
