@@ -284,8 +284,9 @@ body.form-locked .add-skill-btn { display: none; }
             <option>New Braunfels Dental Arts</option><option>Anderson Mill</option>
           </select>
         </div>
+        <div><label class="field-label">Current Hourly Rate ($)</label><input type="number" id="currentRate" placeholder="e.g. 18.50" step="0.25" min="14" max="35" oninput="onRateChange()"></div>
         <div>
-          <label class="field-label">Current Tier</label>
+          <label class="field-label">Current Tier <span id="tierAutoLabel" style="font-size:10px;font-weight:400;color:var(--taupe);text-transform:none;letter-spacing:0;margin-left:4px;"></span></label>
           <select id="currentTier" onchange="onTierChange()">
             <option value="">— Select tier —</option>
             <option value="T1">T1 — $17/hr — Entry, Just Graduated</option>
@@ -297,7 +298,6 @@ body.form-locked .add-skill-btn { display: none; }
             <option value="T7">T7 — $27–29/hr — Complex Tx, OM Coverage</option>
           </select>
         </div>
-        <div><label class="field-label">Current Hourly Rate ($)</label><input type="number" id="currentRate" placeholder="e.g. 18.50" step="0.25" min="14" max="35" onchange="recalc()"></div>
         <div><label class="field-label">Review Period</label><input type="text" id="reviewPeriod" placeholder="e.g. Jan 2025 – Dec 2025"></div>
         <div><label class="field-label">Review Date</label><input type="date" id="reviewDate"></div>
         <div><label class="field-label">Reviewer (OM Name)</label><input type="text" id="reviewerName" placeholder="Office Manager name"></div>
@@ -912,9 +912,38 @@ function getBand(score) {
   return { band:'PIP / Does Not Meet', cls:'band-pip' };
 }
 
-function onTierChange() {
+function rateToTier(rate) {
+  const r = parseFloat(rate);
+  if (isNaN(r) || r <= 0) return '';
+  const keys = ['T1','T2','T3','T4','T5','T6','T7'];
+  for (const k of keys) {
+    if (r >= TIERS[k].floor && r <= TIERS[k].ceiling) return k;
+  }
+  if (r > TIERS.T7.ceiling) return 'T7';
+  // Between tiers — assign to lower tier
+  for (let i = keys.length - 2; i >= 0; i--) {
+    if (r > TIERS[keys[i]].ceiling) return keys[i];
+  }
+  return '';
+}
+
+function onRateChange() {
+  const rate = document.getElementById('currentRate').value;
+  const tier = rateToTier(rate);
+  const sel = document.getElementById('currentTier');
+  const lbl = document.getElementById('tierAutoLabel');
+  if (tier) {
+    sel.value = tier;
+    lbl.textContent = '(auto-detected)';
+  } else {
+    lbl.textContent = '';
+  }
+  onTierChange(true);
+}
+
+function onTierChange(fromRate = false) {
+  if (!fromRate) document.getElementById('tierAutoLabel').textContent = '';
   recalc();
-  // Auto-expand current tier and next tier in accordion
   const key = document.getElementById('currentTier').value;
   if (!key) return;
   openTier(key);
