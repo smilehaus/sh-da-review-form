@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DA Annual Review — Smile Haus</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -463,17 +463,12 @@ body.form-locked .skill-delete-btn { display: none; }
 <!-- Settings modal -->
 <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
-    <h3>&#9881; Integration Settings</h3>
-    <p class="modal-hint">Saved in this browser only. Each OM device needs to be set up once.</p>
-    <div class="modal-field"><label class="field-label">Approval Email (To)</label><input type="text" id="cfg_email" placeholder="leadership@smilehaus.com"></div>
-    <div class="modal-section-label">EmailJS</div>
-    <div class="modal-field"><label class="field-label">Public Key</label><input type="text" id="cfg_ejs_key" placeholder="your_public_key"></div>
-    <div class="modal-field"><label class="field-label">Service ID</label><input type="text" id="cfg_ejs_svc" placeholder="service_xxxxxxx"></div>
-    <div class="modal-field"><label class="field-label">Template ID</label><input type="text" id="cfg_ejs_tpl" placeholder="template_xxxxxxx"></div>
-    <div class="modal-section-label">ClickUp (via Make.com Webhook)</div>
-    <div class="modal-field"><label class="field-label">Make.com Webhook URL</label><input type="text" id="cfg_make_webhook" placeholder="https://hook.us1.make.com/..."></div>
+    <h3>&#9881; Settings</h3>
+    <p class="modal-hint">Worker URL is pre-configured. Only change if redirected by IT.</p>
+    <div class="modal-section-label">Backend Worker URL</div>
+    <div class="modal-field"><label class="field-label">Worker URL</label><input type="text" id="cfg_worker_url" placeholder="https://sh-da-review-worker.smilehaus.workers.dev/submit"></div>
     <div style="margin-top:8px;">
-      <button class="btn-cancel" id="cuTestBtn" onclick="testWebhook()" style="font-size:12px;padding:5px 12px;">&#128337; Test Webhook</button>
+      <button class="btn-cancel" id="cuTestBtn" onclick="testWorker()" style="font-size:12px;padding:5px 12px;">&#128337; Test Connection</button>
       <div id="cuTestResult" style="font-size:12px;margin-top:6px;"></div>
     </div>
     <div class="modal-actions">
@@ -1062,68 +1057,78 @@ async function handleSubmit() {
     showToast('Fill in DA Name, Office, Tier, and OM Signature before submitting.', 'error'); return;
   }
   const cfg = getConfig();
-  if (!cfg.ejsKey && !cfg.makeWebhook) {
-    showToast('Open Settings and configure EmailJS and/or Make.com webhook first.', 'error'); return;
+  if (!cfg.workerUrl) {
+    showToast('Worker URL not configured. Contact IT.', 'error'); return;
   }
+
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'Submitting…';
+  btn.disabled = true;
 
   const summary = buildSummary();
   let emailOk = false, clickupOk = false;
 
-  if (cfg.ejsKey && cfg.ejsSvc && cfg.ejsTpl) {
+  try {
+    // Generate PDF (fall back to HTML snapshot if html2pdf unavailable)
+    btn.textContent = 'Generating PDF…';
+    let formPdfB64 = null, formHtmlB64 = null, ext = 'html';
     try {
-      emailjs.init(cfg.ejsKey);
-      await emailjs.send(cfg.ejsSvc, cfg.ejsTpl, {
-        to_email: cfg.email, da_name: daName, office, tier,
-        message: summary.text, summary_html: summary.html,
-        review_date: document.getElementById('reviewDate').value,
-      });
-      emailOk = true;
-    } catch(e) { console.error('EmailJS:', e); }
-  }
+      formPdfB64 = await generatePDF(summary);
+      ext = 'pdf';
+    } catch(e) {
+      console.warn('PDF generation failed, using HTML snapshot:', e);
+      formHtmlB64 = buildFormSnapshot(summary);
+    }
 
-  if (cfg.makeWebhook) {
-    try {
-      const reviewDate = document.getElementById('reviewDate')?.value || new Date().toISOString().slice(0,10);
-      const taskName = `DA Raise Review — ${daName} — ${office} — ${reviewDate}`;
-      const customFields = buildCustomFields();
-      const taskBody = JSON.stringify({
-        name: taskName,
-        description: summary.text,
-        priority: 2,
-        custom_fields: customFields,
-      });
-      const formSnapshot = buildFormSnapshot(summary);
-      const res = await fetch(cfg.makeWebhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_name: taskName,
-          task_body: taskBody,
-          da_name: daName, office, tier,
-          review_date: reviewDate,
-          score: document.getElementById('totalScore')?.textContent || '—',
-          raise: document.getElementById('raisePreview')?.textContent || '—',
-          new_rate: document.getElementById('newRatePreview')?.textContent || '—',
-          band: document.getElementById('bandName')?.textContent || '—',
-          reviewer: document.getElementById('reviewerName')?.value || '—',
-          summary: summary.text,
-          form_html_b64: formSnapshot,
-          form_filename: `DA_Review_${daName.replace(/\s+/g,'_')}_${reviewDate}.html`,
-        }),
-      });
-      if (res.ok || res.status === 200) clickupOk = true;
-    } catch(e) { console.error('Make webhook:', e); }
+    const reviewDate = document.getElementById('reviewDate')?.value || new Date().toISOString().slice(0,10);
+    const taskName = `DA Raise Review — ${daName} — ${office} — ${reviewDate}`;
+    const taskBody = JSON.stringify({
+      name: taskName,
+      description: summary.text,
+      priority: 2,
+      custom_fields: buildCustomFields(),
+    });
+
+    btn.textContent = 'Submitting…';
+    const res = await fetch(cfg.workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task_name: taskName,
+        task_body: taskBody,
+        da_name: daName, office, tier,
+        review_date: reviewDate,
+        score:    document.getElementById('totalScore')?.textContent   || '—',
+        raise:    document.getElementById('raisePreview')?.textContent || '—',
+        new_rate: document.getElementById('newRatePreview')?.textContent || '—',
+        band:     document.getElementById('bandName')?.textContent     || '—',
+        reviewer: document.getElementById('reviewerName')?.value       || '—',
+        summary: summary.text,
+        form_pdf_b64:  formPdfB64,
+        form_html_b64: formHtmlB64,
+        form_filename: `DA_Review_${daName.replace(/\s+/g,'_')}_${reviewDate}.${ext}`,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      clickupOk = !!data.clickup_ok;
+      emailOk   = !!data.email_ok;
+      if (data.errors?.length) console.warn('Worker errors:', data.errors);
+    } else {
+      const errText = await res.text().catch(() => res.status);
+      console.error('Worker responded', res.status, errText);
+    }
+  } catch(e) {
+    console.error('Submit error:', e);
   }
 
   btn.disabled = false; btn.textContent = 'Submit for Approval';
   const parts = [];
-  if (emailOk) parts.push('Email sent ✓');
-  else if (cfg.ejsKey) parts.push('Email failed — check EmailJS settings');
   if (clickupOk) parts.push('ClickUp task created ✓');
-  else if (cfg.makeWebhook) parts.push('ClickUp failed — check webhook URL');
-  showToast(parts.join('  ·  ') || 'Done', emailOk || clickupOk ? 'success' : 'error');
+  else parts.push('ClickUp: failed — check console');
+  if (emailOk) parts.push('Email sent ✓');
+  else parts.push('Email pending (Resend key needed)');
+  showToast(parts.join('  ·  '), clickupOk ? 'success' : 'error');
 }
 
 function buildSummary() {
@@ -1219,7 +1224,7 @@ function buildSummary() {
   return { text, html };
 }
 
-function buildFormSnapshot(summary) {
+function buildFormSnapshotDoc(summary) {
   const f = id => document.getElementById(id)?.value || '—';
   const t = id => document.getElementById(id)?.textContent || '—';
 
@@ -1300,6 +1305,11 @@ ${f('kpiNotes') !== '—' ? `<div style="margin:8px 0;padding:8px 10px;backgroun
 </div>
 </body></html>`;
 
+  return doc;
+}
+
+function buildFormSnapshot(summary) {
+  const doc = buildFormSnapshotDoc(summary);
   try {
     return btoa(unescape(encodeURIComponent(doc)));
   } catch(e) {
@@ -1307,68 +1317,88 @@ ${f('kpiNotes') !== '—' ? `<div style="margin:8px 0;padding:8px 10px;backgroun
   }
 }
 
+async function generatePDF(summary) {
+  const doc = buildFormSnapshotDoc(summary);
+
+  // Render into an off-screen div
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:780px;background:#fff;';
+
+  // Inject the <style> from the snapshot document
+  const styleMatch = doc.match(/<style>([\s\S]*?)<\/style>/i);
+  if (styleMatch) {
+    const s = document.createElement('style');
+    s.textContent = styleMatch[1];
+    wrapper.appendChild(s);
+  }
+
+  // Inject the body content
+  const bodyMatch = doc.match(/<body>([\s\S]*)<\/body>/i);
+  const bodyDiv = document.createElement('div');
+  bodyDiv.innerHTML = bodyMatch ? bodyMatch[1] : doc;
+  wrapper.appendChild(bodyDiv);
+  document.body.appendChild(wrapper);
+
+  try {
+    const opt = {
+      margin: [10, 15, 10, 15],
+      filename: 'DA_Review.pdf',
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+    const pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
+    const buf = await pdfBlob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  } finally {
+    document.body.removeChild(wrapper);
+  }
+}
+
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
-const DEFAULT_EMAILS = 'saomongmo@gmail.com';
-const DEFAULT_WEBHOOK = 'https://hook.us2.make.com/8mvfz7pjf3unipf4whnropmwqiit42wx';
+const WORKER_URL = 'https://sh-da-review-worker.smilehaus.workers.dev/submit';
 
 function getConfig() {
   return {
-    email:      localStorage.getItem('sh_approval_email') || DEFAULT_EMAILS,
-    ejsKey:     localStorage.getItem('sh_emailjs_key')    || '',
-    ejsSvc:     localStorage.getItem('sh_emailjs_service')|| '',
-    ejsTpl:     localStorage.getItem('sh_emailjs_template')|| '',
-    makeWebhook:localStorage.getItem('sh_make_webhook')   || DEFAULT_WEBHOOK,
+    workerUrl: localStorage.getItem('sh_worker_url') || WORKER_URL,
   };
 }
 function openSettings() {
   const c = getConfig();
-  document.getElementById('cfg_email').value       = c.email;
-  document.getElementById('cfg_ejs_key').value     = c.ejsKey;
-  document.getElementById('cfg_ejs_svc').value     = c.ejsSvc;
-  document.getElementById('cfg_ejs_tpl').value     = c.ejsTpl;
-  document.getElementById('cfg_make_webhook').value = c.makeWebhook;
+  document.getElementById('cfg_worker_url').value = c.workerUrl;
   document.getElementById('settingsModal').classList.add('show');
 }
 function saveSettings() {
-  localStorage.setItem('sh_approval_email',   document.getElementById('cfg_email').value);
-  localStorage.setItem('sh_emailjs_key',      document.getElementById('cfg_ejs_key').value);
-  localStorage.setItem('sh_emailjs_service',  document.getElementById('cfg_ejs_svc').value);
-  localStorage.setItem('sh_emailjs_template', document.getElementById('cfg_ejs_tpl').value);
-  localStorage.setItem('sh_make_webhook',     document.getElementById('cfg_make_webhook').value);
+  localStorage.setItem('sh_worker_url', document.getElementById('cfg_worker_url').value.trim() || WORKER_URL);
   closeSettings(); showToast('Settings saved.', 'success');
 }
 function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
 
-async function testWebhook() {
-  const url = document.getElementById('cfg_make_webhook').value.trim();
+async function testWorker() {
+  const baseUrl = document.getElementById('cfg_worker_url').value.trim() || WORKER_URL;
+  const healthUrl = baseUrl.replace(/\/submit$/, '/health');
   const resultEl = document.getElementById('cuTestResult');
   const btn = document.getElementById('cuTestBtn');
-  if (!url) {
-    resultEl.style.color = '#c0392b';
-    resultEl.textContent = 'Enter the Make.com Webhook URL first.';
-    return;
-  }
   btn.disabled = true; btn.textContent = 'Testing…';
   resultEl.textContent = '';
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ test: true, source: 'DA Review Form connection test' }),
-    });
-    if (res.ok || res.status === 200) {
+    const res = await fetch(healthUrl);
+    if (res.ok) {
       resultEl.style.color = '#2d6a3f';
-      resultEl.textContent = '✓ Webhook reachable — Make.com received the ping.';
+      resultEl.textContent = '✓ Worker is online and reachable.';
     } else {
       resultEl.style.color = '#c0392b';
-      resultEl.textContent = `✗ Webhook returned status ${res.status} — check the URL.`;
+      resultEl.textContent = `✗ Worker returned status ${res.status}.`;
     }
   } catch(e) {
     resultEl.style.color = '#c0392b';
-    resultEl.textContent = '✗ Network error — check the URL and try again.';
+    resultEl.textContent = '✗ Network error — worker unreachable.';
   }
-  btn.disabled = false; btn.textContent = '🕗 Test Webhook';
+  btn.disabled = false; btn.textContent = '🕗 Test Connection';
 }
 
 // ─── LOCK / EDIT ─────────────────────────────────────────────────────────────
