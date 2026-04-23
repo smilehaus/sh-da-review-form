@@ -285,7 +285,7 @@ body.form-locked .skill-delete-btn { display: none; }
         <div><label class="field-label">DA Name</label><input type="text" id="daName" placeholder="Full name"></div>
         <div>
           <label class="field-label">Home Office</label>
-          <select id="homeOffice">
+          <select id="homeOffice" onchange="onOfficeChange()">
             <option value="">— Select office —</option>
             <option>Georgetown</option><option>On the Square</option><option>Austin</option>
             <option>Implant Center</option><option>Medical Parkway</option><option>Arboretum</option>
@@ -500,15 +500,32 @@ body.form-locked .skill-delete-btn { display: none; }
 <script>
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
-const TIERS = {
-  T1: { floor:17,  ceiling:17,  x:0.015, next:'T2', label:'Entry — Just Graduated',      rate:'$17/hr' },
-  T2: { floor:18,  ceiling:18,  x:0.018, next:'T3', label:'Entry-Level Solo Assist',      rate:'$18/hr' },
+// Standard caps — all offices except NBDA
+const TIERS_STANDARD = {
+  T1: { floor:17,  ceiling:17,  x:0.015, next:'T2', label:'Entry — Just Graduated',      rate:'$17/hr'    },
+  T2: { floor:18,  ceiling:19,  x:0.018, next:'T3', label:'Entry-Level Solo Assist',      rate:'$18–19/hr' },
+  T3: { floor:20,  ceiling:21,  x:0.020, next:'T4', label:'Crown & Bridge Proficient',    rate:'$20–21/hr' },
+  T4: { floor:22,  ceiling:24,  x:0.022, next:'T5', label:'Multi-Temps, Surgery & Tx',   rate:'$22–24/hr' },
+  T5: { floor:25,  ceiling:26,  x:0.025, next:'T6', label:'Back-Office Lead (2+ yrs)',    rate:'$25–26/hr' },
+  T6: { floor:27,  ceiling:29,  x:0.028, next:'T7', label:'Cross-Trained FD & Trainer',  rate:'$27–29/hr' },
+  T7: { floor:30,  ceiling:999, x:0.030, next:null,  label:'Complex Tx, OM Coverage',    rate:'$30+/hr'   },
+};
+// NBDA caps — New Braunfels Dental Arts only (lower market)
+const TIERS_NBDA = {
+  T1: { floor:17,  ceiling:17,  x:0.015, next:'T2', label:'Entry — Just Graduated',      rate:'$17/hr'    },
+  T2: { floor:18,  ceiling:18,  x:0.018, next:'T3', label:'Entry-Level Solo Assist',      rate:'$18/hr'    },
   T3: { floor:19,  ceiling:20,  x:0.020, next:'T4', label:'Crown & Bridge Proficient',    rate:'$19–20/hr' },
   T4: { floor:21,  ceiling:22,  x:0.022, next:'T5', label:'Multi-Temps, Surgery & Tx',   rate:'$21–22/hr' },
   T5: { floor:23,  ceiling:24,  x:0.025, next:'T6', label:'Back-Office Lead (2+ yrs)',    rate:'$23–24/hr' },
   T6: { floor:25,  ceiling:26,  x:0.028, next:'T7', label:'Cross-Trained FD & Trainer',  rate:'$25–26/hr' },
   T7: { floor:27,  ceiling:29,  x:0.030, next:null,  label:'Complex Tx, OM Coverage',    rate:'$27–29/hr' },
 };
+const TIERS = TIERS_STANDARD; // used by renderTierAccordion() at init (no office selected yet)
+
+function getActiveTiers() {
+  const office = document.getElementById('homeOffice')?.value;
+  return office === 'New Braunfels Dental Arts' ? TIERS_NBDA : TIERS_STANDARD;
+}
 
 const TIER_SKILLS = {
   T1: [
@@ -738,7 +755,7 @@ function renderTierAccordion() {
         <div class="tier-header-left">
           <span class="tier-badge" id="tierBadge_${key}">${key}</span>
           <span class="tier-title" contenteditable="false" data-editable id="tierTitle_${key}">${tier.label}</span>
-          <span class="tier-rate">${tier.rate}</span>
+          <span class="tier-rate" id="tierRate_${key}">${tier.rate}</span>
           <span class="tier-gate-status gate-na" id="tierGateStatus_${key}">—</span>
         </div>
         <div class="tier-header-right">
@@ -922,7 +939,7 @@ function recalc() {
 
   // Gate calculation
   const tierKey = document.getElementById('currentTier').value;
-  const tier = TIERS[tierKey];
+  const tier = getActiveTiers()[tierKey];
   const tierKeys = ['T1','T2','T3','T4','T5','T6','T7'];
 
   // Update tier badges and status indicators
@@ -1005,7 +1022,7 @@ function recalc() {
 
   const promoting = gateBResult && total >= 85 && highestPromoTier;
   const pf = promoting ? 1.5 : 1.0;
-  const targetTierObj = promoting ? TIERS[highestPromoTier] : tier;
+  const targetTierObj = promoting ? getActiveTiers()[highestPromoTier] : tier;
   const baseRate = parseFloat(document.getElementById('currentRate').value) || tier.floor;
   const rawRaise = (total - 70) * tier.x * pf;
   let newRate = Math.min(baseRate + rawRaise, targetTierObj.ceiling);
@@ -1029,14 +1046,15 @@ function getBand(score) {
 function rateToTier(rate) {
   const r = parseFloat(rate);
   if (isNaN(r) || r <= 0) return '';
+  const tiers = getActiveTiers();
   const keys = ['T1','T2','T3','T4','T5','T6','T7'];
   for (const k of keys) {
-    if (r >= TIERS[k].floor && r <= TIERS[k].ceiling) return k;
+    if (r >= tiers[k].floor && r <= tiers[k].ceiling) return k;
   }
-  if (r > TIERS.T7.ceiling) return 'T7';
+  if (r > tiers.T7.ceiling) return 'T7';
   // Between tiers — assign to lower tier
   for (let i = keys.length - 2; i >= 0; i--) {
-    if (r > TIERS[keys[i]].ceiling) return keys[i];
+    if (r > tiers[keys[i]].ceiling) return keys[i];
   }
   return '';
 }
@@ -1058,6 +1076,29 @@ function onRateChange() {
 function onTierChange(fromRate = false) {
   if (!fromRate) document.getElementById('tierAutoLabel').textContent = '';
   recalc();
+}
+
+function onOfficeChange() {
+  const tiers = getActiveTiers();
+  const keys = ['T1','T2','T3','T4','T5','T6','T7'];
+  const labels = [
+    'Entry, Just Graduated', 'Solo Assisting', 'Crown &amp; Bridge',
+    'Multi-Temps, Surgery', 'Back-Office Lead', 'FD Coverage &amp; Trainer', 'Complex Tx, OM Coverage',
+  ];
+  // Update rate spans in tier accordion
+  keys.forEach(k => {
+    const el = document.getElementById(`tierRate_${k}`);
+    if (el) el.textContent = tiers[k].rate;
+  });
+  // Update currentTier select options so rates match office
+  const tierSel = document.getElementById('currentTier');
+  const selectedVal = tierSel.value;
+  tierSel.innerHTML = `<option value="">— Select tier —</option>` +
+    keys.map((k, i) => `<option value="${k}">${k} — ${tiers[k].rate} — ${labels[i]}</option>`).join('');
+  tierSel.value = selectedVal;
+  // Re-run rate auto-detect with new tier structure
+  onRateChange();
+  saveFormState();
 }
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────────────
@@ -1261,7 +1302,7 @@ function buildFormSnapshotDoc(summary) {
   // Tier skill rows
   const tierRows = Object.keys(TIER_SKILLS).map(tk => {
     const skills = TIER_SKILLS[tk];
-    const header = `<tr style="background:#2A2E31;color:#fff"><td colspan="2" style="padding:6px 10px;font-size:12px;font-weight:700;">Tier ${tk.replace('T','')} — ${TIERS[tk].label}</td></tr>`;
+    const header = `<tr style="background:#2A2E31;color:#fff"><td colspan="2" style="padding:6px 10px;font-size:12px;font-weight:700;">Tier ${tk.replace('T','')} — ${TIERS_STANDARD[tk].label}</td></tr>`;
     const rows = skills.map((skill, idx) => {
       const state = skillState[`${tk}_${idx}`];
       const display = state === 'can' ? '✓ Can Do' : (state === 'cannot' ? '✗ Not Yet' : '—');
