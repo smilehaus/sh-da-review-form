@@ -637,7 +637,7 @@ function buildCustomFields() {
   const office    = f('homeOffice');
   const tier      = f('currentTier');
   const band      = (document.getElementById('bandName')?.textContent || '').trim();
-  const targetTier= f('targetTier');
+  const targetTier= highestPromoTier || ''; // set by recalc() — highest consecutive passing tier above current
   const gateA     = (document.getElementById('gateAStatus')?.textContent || '').includes('✓');
   const gateB     = (document.getElementById('gateBStatus')?.textContent || '').includes('✓');
   const reviewDateVal = f('reviewDate');
@@ -669,6 +669,7 @@ function buildCustomFields() {
 
 const scores = {};     // kpi/perf item scores: 1–5 or 'na'
 const skillState = {}; // 'tierKey_idx': 'can' | 'cannot' | null
+let highestPromoTier = null; // highest consecutive passing tier above current (updated by recalc)
 
 // ─── RENDER: KPIs ────────────────────────────────────────────────────────────
 
@@ -930,7 +931,7 @@ function recalc() {
     const badge = document.getElementById(`tierBadge_${k}`);
     const statusEl = document.getElementById(`tierGateStatus_${k}`);
     if (!toggle) return;
-    toggle.className = 'tier-toggle' + (k === tierKey ? ' current-tier' : tier && tier.next === k ? ' next-tier' : '');
+    toggle.className = 'tier-header' + (k === tierKey ? ' current-tier' : tier && tier.next === k ? ' next-tier' : '');
     badge.className = 'tier-badge' + (k === tierKey ? ' current' : tier && tier.next === k ? ' next' : '');
     const gs = getTierGateStatus(k);
     statusEl.className = 'tier-gate-status ' + (gs === 'pass' ? 'gate-pass' : gs === 'fail' ? 'gate-fail' : '');
@@ -941,15 +942,23 @@ function recalc() {
 
   // Gate A: all tiers from T1 through current tier must pass
   let gateA = false, gateBResult = false;
+  highestPromoTier = null; // reset module-level
   if (tier) {
     const currentIdx = tierKeys.indexOf(tierKey);
     const tiersForA = tierKeys.slice(0, currentIdx + 1);
     gateA = tiersForA.every(k => getTierGateStatus(k) === 'pass');
 
-    // Gate B: next tier must pass
-    if (tier.next) {
-      gateBResult = getTierGateStatus(tier.next) === 'pass';
+    // Gate B: walk upward from current+1 through consecutive passing tiers
+    let promoIdx = currentIdx + 1;
+    while (promoIdx < tierKeys.length) {
+      if (getTierGateStatus(tierKeys[promoIdx]) === 'pass') {
+        highestPromoTier = tierKeys[promoIdx];
+        promoIdx++;
+      } else {
+        break;
+      }
     }
+    gateBResult = highestPromoTier !== null;
   }
 
   // Update gate summary boxes
@@ -973,7 +982,12 @@ function recalc() {
     if (tier.next) {
       gateBBox.className = 'gate-box ' + (gateBResult ? 'pass' : 'fail');
       gateBStatus.textContent = gateBResult ? '✓ Passed' : '✗ Not Yet Passed';
-      gateBSub.textContent = gateBResult ? `Promotion to ${tier.next} eligible (score ≥ 85)` : `Complete all ${tier.next} skills to promote`;
+      if (gateBResult) {
+        const multiTier = highestPromoTier !== tier.next;
+        gateBSub.textContent = `Promotion to ${highestPromoTier} eligible (score ≥ 85)${multiTier ? ' · Multi-tier advance' : ''}`;
+      } else {
+        gateBSub.textContent = `Complete all ${tier.next} skills to promote`;
+      }
     } else {
       gateBBox.className = 'gate-box incomplete';
       gateBStatus.textContent = 'Highest tier';
@@ -989,18 +1003,18 @@ function recalc() {
     return;
   }
 
-  const promoting = gateBResult && total >= 85 && tier.next;
+  const promoting = gateBResult && total >= 85 && highestPromoTier;
   const pf = promoting ? 1.5 : 1.0;
-  const targetTier = promoting ? TIERS[tier.next] : tier;
+  const targetTierObj = promoting ? TIERS[highestPromoTier] : tier;
   const baseRate = parseFloat(document.getElementById('currentRate').value) || tier.floor;
   const rawRaise = (total - 70) * tier.x * pf;
-  let newRate = Math.min(baseRate + rawRaise, targetTier.ceiling);
-  newRate = Math.max(newRate, promoting ? targetTier.floor : baseRate);
+  let newRate = Math.min(baseRate + rawRaise, targetTierObj.ceiling);
+  newRate = Math.max(newRate, promoting ? targetTierObj.floor : baseRate);
   const finalRaise = newRate - baseRate;
 
   document.getElementById('raisePreview').textContent = `+$${finalRaise.toFixed(2)}/hr`;
   document.getElementById('newRatePreview').textContent = promoting
-    ? `Promoting to ${tier.next} · New rate: $${newRate.toFixed(2)}/hr`
+    ? `Promoting to ${highestPromoTier} · New rate: $${newRate.toFixed(2)}/hr`
     : `New rate: $${newRate.toFixed(2)}/hr`;
 }
 
@@ -1320,42 +1334,22 @@ function buildFormSnapshot(summary) {
 async function generatePDF(summary) {
   const doc = buildFormSnapshotDoc(summary);
 
-  // Render into an off-screen div
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:780px;background:#fff;';
+  // Extract body content — all styles are inline, no external CSS needed
+  const bodyMatch = doc.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const bodyHtml = bodyMatch ? bodyMatch[1] : doc;
 
-  // Inject the <style> from the snapshot document
-  const styleMatch = doc.match(/<style>([\s\S]*?)<\/style>/i);
-  if (styleMatch) {
-    const s = document.createElement('style');
-    s.textContent = styleMatch[1];
-    wrapper.appendChild(s);
-  }
+  const opt = {
+    margin: [10, 15, 10, 15],
+    filename: 'DA_Review.pdf',
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  };
 
-  // Inject the body content
-  const bodyMatch = doc.match(/<body>([\s\S]*)<\/body>/i);
-  const bodyDiv = document.createElement('div');
-  bodyDiv.innerHTML = bodyMatch ? bodyMatch[1] : doc;
-  wrapper.appendChild(bodyDiv);
-  document.body.appendChild(wrapper);
-
-  try {
-    const opt = {
-      margin: [10, 15, 10, 15],
-      filename: 'DA_Review.pdf',
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    };
-    const pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
-    const buf = await pdfBlob.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let bin = '';
-    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin);
-  } finally {
-    document.body.removeChild(wrapper);
-  }
+  // Use html2pdf string input + correct 0.10.x API to get data URI
+  const pdf = await html2pdf().set(opt).from(bodyHtml).toPdf().get('pdf');
+  const dataUri = pdf.output('datauristring');
+  return dataUri.split(',')[1]; // return base64 portion only
 }
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
