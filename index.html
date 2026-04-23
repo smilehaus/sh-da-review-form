@@ -166,6 +166,10 @@ body.form-locked .add-skill-btn { display: none; }
 .skill-row:nth-child(even) { background: #fafaf8; }
 .skill-name { flex: 1; font-size: 13px; color: var(--onyx); line-height: 1.4; font-family: var(--font-body); font-weight: 400; }
 .skill-name[contenteditable="true"] { color: var(--onyx); font-size: 13px; font-family: var(--font-body); font-weight: 400; }
+.skill-delete-btn { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--taupe); padding: 2px 4px; border-radius: 3px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s, color 0.15s; }
+.skill-row:hover .skill-delete-btn { opacity: 1; }
+.skill-delete-btn:hover { color: #c0392b; }
+body.form-locked .skill-delete-btn { display: none; }
 .skill-btns { display: flex; gap: 4px; flex-shrink: 0; }
 .skill-btn {
   width: 32px; height: 28px; border: 1.5px solid var(--sandstone); background: var(--white);
@@ -755,6 +759,7 @@ function renderTierAccordion() {
               <button class="skill-btn" id="skill_${key}_${idx}_can" title="Can do" onclick="setSkill('${key}',${idx},'can')">✓</button>
               <button class="skill-btn" id="skill_${key}_${idx}_cannot" title="Cannot do" onclick="setSkill('${key}',${idx},'cannot')">✗</button>
             </div>
+            <button class="skill-delete-btn" title="Remove this skill" onclick="deleteSkill(this)">🗑</button>
           </div>`).join('')}
         <div class="add-skill-row" style="padding:6px 12px 10px;">
           <button class="add-skill-btn" onclick="addSkill('${key}')">+ Add skill / job task</button>
@@ -832,11 +837,28 @@ function addSkill(tierKey) {
     <div class="skill-btns">
       <button class="skill-btn" id="skill_${tierKey}_${idx}_can" title="Can do" onclick="setSkill('${tierKey}',${idx},'can')">✓</button>
       <button class="skill-btn" id="skill_${tierKey}_${idx}_cannot" title="Cannot do" onclick="setSkill('${tierKey}',${idx},'cannot')">✗</button>
-    </div>`;
+    </div>
+    <button class="skill-delete-btn" title="Remove this skill" onclick="deleteSkill(this)">🗑</button>`;
   const addRow = tbody.querySelector('.add-skill-row');
   tbody.insertBefore(row, addRow);
   if (!tbody.classList.contains('open')) toggleTier(tierKey);
   setTimeout(() => document.getElementById(`skillName_${tierKey}_${idx}`)?.focus(), 50);
+}
+
+function deleteSkill(btn) {
+  const row = btn.closest('.skill-row');
+  if (!row) return;
+  // Clear skillState for any matching key on this row
+  const nameEl = row.querySelector('.skill-name');
+  if (nameEl?.id) {
+    const parts = nameEl.id.split('_'); // skillName_T1_3
+    if (parts.length >= 3) {
+      const key = `${parts[1]}_${parts[2]}`;
+      delete skillState[key];
+    }
+  }
+  row.remove();
+  saveFormState();
 }
 
 function setSkill(tierKey, idx, state) {
