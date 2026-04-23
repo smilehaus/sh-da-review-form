@@ -122,11 +122,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--earth); bor
 .tier-accordion { border: 1px solid var(--sandstone); border-radius: var(--radius); overflow: hidden; margin-bottom: 0; }
 .tier-row { border-bottom: 1px solid var(--sandstone); }
 .tier-row:last-child { border-bottom: none; }
-.tier-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
+.tier-header { display: flex; align-items: center; padding: 10px 16px; gap: 8px; width: 100%; box-sizing: border-box; }
 .tier-header.current-tier { background: #f0ede6; }
 .tier-header.next-tier { background: #f5f0eb; }
-.tier-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
-.tier-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tier-header-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow: hidden; }
+.tier-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
 .tier-badge { font-size: 12px; font-weight: 700; background: var(--onyx); color: var(--white); padding: 2px 8px; border-radius: 3px; flex-shrink: 0; }
 .tier-badge.current { background: var(--earth); }
 .tier-badge.next { background: var(--taupe); }
