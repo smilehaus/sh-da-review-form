@@ -11,8 +11,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: 94aca684fdc459d5638c42fd5c27aee8
-          command: pages deploy . --project-name=sh-da-review-form --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 94aca684fdc459d5638c42fd5c27aee8
+        run: npx wrangler pages deploy . --project-name=sh-da-review-form --branch=main
