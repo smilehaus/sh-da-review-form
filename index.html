@@ -164,7 +164,8 @@ body.form-locked .add-skill-btn { display: none; }
 .skill-row { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #f0ece4; }
 .skill-row:last-child { border-bottom: none; }
 .skill-row:nth-child(even) { background: #fafaf8; }
-.skill-name { flex: 1; font-size: 13px; color: var(--onyx); line-height: 1.4; }
+.skill-name { flex: 1; font-size: 13px; color: var(--onyx); line-height: 1.4; font-family: var(--font-body); font-weight: 400; }
+.skill-name[contenteditable="true"] { color: var(--onyx); font-size: 13px; font-family: var(--font-body); font-weight: 400; }
 .skill-btns { display: flex; gap: 4px; flex-shrink: 0; }
 .skill-btn {
   width: 32px; height: 28px; border: 1.5px solid var(--sandstone); background: var(--white);
