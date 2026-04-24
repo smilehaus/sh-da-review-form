@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DA Annual Review — Smile Haus</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -1388,24 +1388,194 @@ function buildFormSnapshot(summary) {
 }
 
 async function generatePDF(summary) {
-  const doc = buildFormSnapshotDoc(summary);
+  if (!window.jspdf) throw new Error('jsPDF not loaded');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-  // Extract body content — all styles are inline, no external CSS needed
-  const bodyMatch = doc.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  const bodyHtml = bodyMatch ? bodyMatch[1] : doc;
+  const W = 210, H = 297, ML = 18, MR = 18;
+  const CW = W - ML - MR;
+  let y = 0;
 
-  const opt = {
-    margin: [10, 15, 10, 15],
-    filename: 'DA_Review.pdf',
-    image: { type: 'jpeg', quality: 0.95 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+  const C = {
+    onyx:  [42, 46, 49],  earth: [135, 119, 101], white: [255,255,255],
+    ink:   [42, 46, 49],  sand:  [214,205,189],   green: [45,106,63],
+    red:   [192,57,43],   altBg: [245,243,239],
   };
 
-  // Use html2pdf string input + correct 0.10.x API to get data URI
-  const pdf = await html2pdf().set(opt).from(bodyHtml).toPdf().get('pdf');
-  const dataUri = pdf.output('datauristring');
-  return dataUri.split(',')[1]; // return base64 portion only
+  function newPage() { doc.addPage(); y = 20; }
+  function checkY(need = 10) { if (y + need > H - 18) newPage(); }
+
+  function secHdr(text) {
+    checkY(12);
+    doc.setFillColor(...C.earth); doc.rect(ML, y, CW, 7, 'F');
+    doc.setTextColor(...C.white); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.text(text.toUpperCase(), ML + 3, y + 5);
+    y += 10; doc.setTextColor(...C.ink);
+  }
+
+  function kv(label, value, alt) {
+    checkY(7);
+    if (alt) { doc.setFillColor(...C.altBg); doc.rect(ML, y - 1, CW, 7, 'F'); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...C.earth);
+    doc.text(label, ML + 2, y + 4);
+    doc.setFont('helvetica','normal'); doc.setTextColor(...C.ink);
+    doc.text(String(value || '-'), ML + 52, y + 4);
+    y += 7;
+  }
+
+  const fv = id => document.getElementById(id)?.value?.trim() || '-';
+  const tv = id => document.getElementById(id)?.textContent?.trim() || '-';
+
+  // Header bar
+  doc.setFillColor(...C.onyx); doc.rect(0, 0, W, 24, 'F');
+  doc.setTextColor(...C.white); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('Smile Haus  -  DA Annual Review & Compensation Form', ML, 13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(180,180,180);
+  doc.text('Submitted ' + new Date().toLocaleDateString(), ML, 20);
+  y = 32;
+
+  // Employee info
+  secHdr('Employee Info');
+  [['DA Name', fv('daName')], ['Home Office', fv('homeOffice')],
+   ['Current Tier', fv('currentTier')], ['Current Hourly Rate', '$' + fv('currentRate') + '/hr'],
+   ['Review Period', fv('reviewPeriod')], ['Review Date', fv('reviewDate')],
+   ['Reviewer', fv('reviewerName')]].forEach(([l,v],i) => kv(l,v,i%2===1));
+  y += 3;
+
+  // Scores
+  secHdr('Scores');
+  kv('Part I  - KPI Performance',       tv('p1Total') + ' / ' + tv('p1Max'));
+  kv('Part II - In-Office Performance',  tv('p2Total') + ' / 75', true);
+  kv('Total Score',  tv('totalScore') + ' / ' + tv('totalMax') + '  -  ' + tv('bandName'));
+  y += 3;
+
+  // Gates
+  secHdr('Gates');
+  ['gateAStatus','gateBStatus'].forEach((id,i) => {
+    checkY(7);
+    const label = i === 0 ? 'Gate A  (Current Tier Mastery)' : 'Gate B  (Next Tier / Promotion)';
+    const status = tv(id);
+    if (i % 2 === 1) { doc.setFillColor(...C.altBg); doc.rect(ML, y-1, CW, 7, 'F'); }
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...C.earth);
+    doc.text(label, ML+2, y+4);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...(status.includes('Passed') && !status.includes('Not') ? C.green : C.red));
+    doc.text(status.replace('✓','').replace('✗','').trim(), ML+80, y+4);
+    y += 7;
+  });
+  y += 3;
+
+  // Compensation highlight box
+  secHdr('Compensation Decision');
+  doc.setFillColor(...C.onyx); doc.rect(ML, y, CW, 18, 'F');
+  doc.setTextColor(...C.white); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text(tv('raisePreview'), ML + CW/2, y+11, { align:'center' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(tv('newRatePreview'), ML + CW/2, y+16, { align:'center' });
+  y += 23;
+
+  // KPI detail
+  secHdr('Part I  -  KPI Performance Detail');
+  doc.setFontSize(8.5);
+  KPIS.forEach((kpi,i) => {
+    checkY(7);
+    const sc = scores[kpi.id];
+    const display = sc === 'na' ? 'N/A' : (sc != null ? String(sc) : '-');
+    const name = document.getElementById('kpiName_'+kpi.id)?.textContent || kpi.name;
+    if (i%2===1) { doc.setFillColor(...C.altBg); doc.rect(ML, y-1, CW, 6.5, 'F'); }
+    doc.setFont('helvetica','normal'); doc.setTextColor(...C.ink);
+    doc.text(name, ML+2, y+3.5);
+    doc.setFont('helvetica','bold');
+    doc.text(display, ML+CW-3, y+3.5, { align:'right' });
+    y += 6.5;
+  });
+  y += 3;
+
+  // Performance detail
+  secHdr('Part II  -  In-Office Performance Detail');
+  PERF_SECTIONS.forEach(sec => {
+    checkY(12);
+    doc.setFillColor(238,234,226); doc.rect(ML, y-1, CW, 6.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...C.earth);
+    doc.text(sec.title.toUpperCase(), ML+2, y+3.5);
+    y += 6.5;
+    sec.items.forEach((item,i) => {
+      checkY(6);
+      const sc = scores[item.id];
+      if (i%2===1) { doc.setFillColor(250,249,246); doc.rect(ML, y-1, CW, 6, 'F'); }
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...C.ink);
+      doc.text(item.name, ML+6, y+3);
+      doc.setFont('helvetica','bold');
+      doc.text(sc != null ? String(sc) : '-', ML+CW-3, y+3, { align:'right' });
+      y += 6;
+    });
+    y += 2;
+  });
+
+  // Tier competency
+  secHdr('Tier Competency Checklist');
+  const tierKeys = ['T1','T2','T3','T4','T5','T6','T7'];
+  tierKeys.forEach(tk => {
+    const body = document.getElementById('tierBody_'+tk);
+    const allRows = body ? [...body.querySelectorAll('.skill-row')] : [];
+    if (!allRows.length) return;
+    checkY(12);
+    doc.setFillColor(...C.onyx); doc.rect(ML, y-1, CW, 6.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...C.white);
+    const tierLabel = TIERS_STANDARD[tk]?.label || '';
+    doc.text('Tier ' + tk.replace('T','') + '  -  ' + tierLabel, ML+3, y+3.5);
+    y += 6.5;
+    allRows.forEach((row, ri) => {
+      checkY(6);
+      const nameEl = row.querySelector('.skill-name');
+      const skillName = nameEl?.textContent?.trim() || ('Skill ' + (ri+1));
+      const canBtn = row.querySelector('[id$="_can"]');
+      let state = null;
+      if (canBtn) {
+        const m = canBtn.id.match(/skill_\w+_(\d+)_can/);
+        if (m) state = skillState[tk+'_'+m[1]];
+      }
+      if (ri%2===1) { doc.setFillColor(250,249,246); doc.rect(ML, y-1, CW, 6, 'F'); }
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...C.ink);
+      doc.text(skillName, ML+6, y+3);
+      doc.setFont('helvetica','bold');
+      if (state === 'can')    { doc.setTextColor(...C.green); doc.text('Can Do',   ML+CW-3, y+3, {align:'right'}); }
+      else if (state==='cannot'){ doc.setTextColor(...C.red);   doc.text('Not Yet',  ML+CW-3, y+3, {align:'right'}); }
+      else                    { doc.setTextColor(160,160,160); doc.text('-',        ML+CW-3, y+3, {align:'right'}); }
+      y += 6;
+    });
+    y += 2;
+  });
+
+  // Narrative
+  const narFields = [
+    ['Strengths', fv('strengths')], ['Growth Areas', fv('growthAreas')],
+    ['Goals (12 Months)', fv('goals')], ['Employee Response', fv('employeeComments')],
+  ].filter(([,v]) => v && v !== '-');
+  if (narFields.length) {
+    secHdr('Review Narrative');
+    narFields.forEach(([lbl, val], i) => {
+      checkY(12);
+      if (i%2===1) { doc.setFillColor(...C.altBg); doc.rect(ML, y-1, CW, 7, 'F'); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...C.earth);
+      doc.text(lbl + ':', ML+2, y+4);
+      doc.setFont('helvetica','normal'); doc.setTextColor(...C.ink);
+      const lines = doc.splitTextToSize(val, CW - 45);
+      doc.text(lines, ML+44, y+4);
+      y += Math.max(7, lines.length * 5 + 3);
+    });
+  }
+
+  // Signature footer
+  checkY(14);
+  y += 4;
+  doc.setDrawColor(...C.sand); doc.setLineWidth(0.3);
+  doc.line(ML, y, ML+CW, y);
+  y += 6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...C.earth);
+  doc.text('OM: ' + fv('omSignature') + '   |   Employee: ' + fv('employeeSig') + '   |   Date: ' + fv('reviewDate'), ML, y);
+
+  return doc.output('datauristring').split(',')[1];
 }
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
