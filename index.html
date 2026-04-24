@@ -810,11 +810,10 @@ function setScore(id, val) {
 }
 
 function passAllSkills(tierKey) {
-  const skills = TIER_SKILLS[tierKey];
-  const allAlreadyPassed = skills.every((_, idx) => skillState[`${tierKey}_${idx}`] === 'can');
-  skills.forEach((_, idx) => {
-    const k = `${tierKey}_${idx}`;
-    skillState[k] = allAlreadyPassed ? null : 'can';
+  const indices = getSkillIndices(tierKey);
+  const allAlreadyPassed = indices.every(idx => skillState[`${tierKey}_${idx}`] === 'can');
+  indices.forEach(idx => {
+    skillState[`${tierKey}_${idx}`] = allAlreadyPassed ? null : 'can';
     const canBtn    = document.getElementById(`skill_${tierKey}_${idx}_can`);
     const cannotBtn = document.getElementById(`skill_${tierKey}_${idx}_cannot`);
     if (canBtn)    canBtn.className    = 'skill-btn' + (!allAlreadyPassed ? ' can-do' : '');
@@ -826,11 +825,10 @@ function passAllSkills(tierKey) {
 }
 
 function failAllSkills(tierKey) {
-  const skills = TIER_SKILLS[tierKey];
-  const allAlreadyFailed = skills.every((_, idx) => skillState[`${tierKey}_${idx}`] === 'cannot');
-  skills.forEach((_, idx) => {
-    const k = `${tierKey}_${idx}`;
-    skillState[k] = allAlreadyFailed ? null : 'cannot';
+  const indices = getSkillIndices(tierKey);
+  const allAlreadyFailed = indices.every(idx => skillState[`${tierKey}_${idx}`] === 'cannot');
+  indices.forEach(idx => {
+    skillState[`${tierKey}_${idx}`] = allAlreadyFailed ? null : 'cannot';
     const canBtn    = document.getElementById(`skill_${tierKey}_${idx}_can`);
     const cannotBtn = document.getElementById(`skill_${tierKey}_${idx}_cannot`);
     if (canBtn)    canBtn.className = 'skill-btn';
@@ -892,17 +890,29 @@ function setSkill(tierKey, idx, state) {
 
 // ─── CALCULATION ─────────────────────────────────────────────────────────────
 
+// Returns all skill indices for a tier — base + any custom-added rows
+function getSkillIndices(tierKey) {
+  const body = document.getElementById(`tierBody_${tierKey}`);
+  if (!body) return TIER_SKILLS[tierKey].map((_, i) => i);
+  const indices = [];
+  body.querySelectorAll(`[id^="skill_${tierKey}_"][id$="_can"]`).forEach(btn => {
+    const m = btn.id.match(new RegExp(`skill_${tierKey}_(\\d+)_can`));
+    if (m) indices.push(parseInt(m[1]));
+  });
+  return indices.length ? indices : TIER_SKILLS[tierKey].map((_, i) => i);
+}
+
 function getTierGateStatus(tierKey) {
   // Returns: 'pass' | 'fail' | 'incomplete'
-  const skills = TIER_SKILLS[tierKey];
-  let allPass = true, anyFail = false, anyBlank = false;
-  skills.forEach((_, idx) => {
+  const indices = getSkillIndices(tierKey);
+  let allPass = true, anyFail = false;
+  indices.forEach(idx => {
     const state = skillState[`${tierKey}_${idx}`];
     if (state === 'can') { /* good */ }
     else if (state === 'cannot') { anyFail = true; allPass = false; }
-    else { anyBlank = true; allPass = false; }
+    else { allPass = false; }
   });
-  if (allPass) return 'pass';
+  if (allPass && indices.length > 0) return 'pass';
   if (anyFail) return 'fail';
   return 'incomplete';
 }
