@@ -205,6 +205,9 @@ body.form-locked .skill-delete-btn { display: none; }
 .submit-btn { background: var(--earth); color: var(--white); border: none; border-radius: var(--radius); padding: 14px 32px; font-family: var(--font-body); font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; letter-spacing: 0.03em; transition: background 0.2s; margin-top: 8px; }
 .submit-btn:hover { background: var(--onyx); }
 .submit-btn:disabled { background: var(--sandstone); cursor: not-allowed; }
+.preview-pdf-btn { background: none; border: 1px solid var(--sandstone); color: var(--earth); border-radius: var(--radius); padding: 9px 20px; font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; width: 100%; margin-top: 8px; transition: all 0.15s; }
+.preview-pdf-btn:hover { border-color: var(--earth); background: var(--earth); color: var(--white); }
+.preview-pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Dividers */
 .section-divider { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--earth); padding: 8px 0 6px; border-bottom: 1px solid var(--sandstone); margin-bottom: 14px; }
@@ -440,6 +443,7 @@ body.form-locked .skill-delete-btn { display: none; }
       Submitting emails a raise summary to leadership and creates a ClickUp approval task.
       Configure both via <strong>Settings</strong> (gear icon, top right).
     </p>
+    <button class="preview-pdf-btn" id="previewPdfBtn" onclick="downloadPreviewPDF()">&#128196; Download PDF Preview</button>
     <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Submit for Approval</button>
   </div>
 
@@ -1117,6 +1121,33 @@ function onOfficeChange() {
 }
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────────────
+
+async function downloadPreviewPDF() {
+  const btn = document.getElementById('previewPdfBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    if (!window.jspdf) { showToast('jsPDF library not loaded — check internet connection.', 'error'); return; }
+    const summary = buildSummary();
+    const b64 = await generatePDF(summary);
+    if (!b64 || b64.length < 100) { showToast('PDF came out empty — check console for errors.', 'error'); return; }
+    // Decode base64 and trigger download
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const daName = document.getElementById('daName')?.value?.trim() || 'DA';
+    const date = document.getElementById('reviewDate')?.value || new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `DA_Review_${daName.replace(/\s+/g,'_')}_${date}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('PDF downloaded — review it, then click Submit.', 'success');
+  } catch(e) {
+    console.error('PDF preview error:', e);
+    showToast('PDF generation failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '\uD83D\uDCC4 Download PDF Preview';
+  }
+}
 
 async function handleSubmit() {
   const daName = document.getElementById('daName').value.trim();
