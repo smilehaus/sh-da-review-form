@@ -1496,6 +1496,24 @@ async function handleSubmit() {
       custom_fields: buildCustomFields(),
     });
 
+    // Capture full form state for re-edit support
+    const formState = { _scores: {...scores}, _skillState: {...skillState}, _dynamicSkills: {} };
+    document.querySelectorAll('.main [id], .submit-section [id]').forEach(el => {
+      if ((el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') && el.id && el.id !== 'pinInput') formState[el.id] = el.value;
+    });
+    document.querySelectorAll('[data-editable][id]').forEach(el => { formState[el.id] = el.textContent; });
+    ['T1','T2','T3','T4','T5','T6','T7'].forEach(k => {
+      const body = document.getElementById(`tierBody_${k}`);
+      if (!body) return;
+      const base = TIER_SKILLS[k].length;
+      const rows = body.querySelectorAll('.skill-row');
+      if (rows.length > base) {
+        formState._dynamicSkills[k] = [];
+        for (let i = base; i < rows.length; i++) formState._dynamicSkills[k].push(rows[i].querySelector('.skill-name')?.textContent || '');
+      }
+    });
+    if (typeof getOverrideData === 'function') formState._override = getOverrideData();
+
     btn.textContent = 'Submitting…';
     const jwt = getAuthJwt();
     const submitHeaders = { 'Content-Type': 'application/json' };
@@ -1518,6 +1536,7 @@ async function handleSubmit() {
         form_html_b64: formHtmlB64,
         form_filename: `DA_Review_${daName.replace(/\s+/g,'_')}_${reviewDate}.${ext}`,
         draft_id: getDraftId() || undefined,
+        form_state: formState,
       }),
     });
 
